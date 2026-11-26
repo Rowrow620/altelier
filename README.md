@@ -2,8 +2,6 @@
 
 Desktop mod manager for **Lobotomy Corporation** and **Library of Ruina**.
 
-[Development roadmap](ROADMAP.md)
-
 ---
 
 ## Features
