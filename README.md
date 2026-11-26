@@ -1,5 +1,10 @@
 # Atelier Mod Manager
 
+[![CI](https://img.shields.io/github/actions/workflow/status/Rowrow620/altelier/ci.yml?branch=main&label=CI&style=flat-square)](https://github.com/Rowrow620/altelier/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Rowrow620/altelier?label=Release&style=flat-square)](https://github.com/Rowrow620/altelier/releases)
+[![License](https://img.shields.io/github/license/Rowrow620/altelier?label=License&style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20x64-e7ba70?style=flat-square)](https://github.com/Rowrow620/altelier/releases)
+
 Desktop mod manager for **Lobotomy Corporation** and **Library of Ruina**.
 
 ---
