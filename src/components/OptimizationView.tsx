@@ -163,7 +163,7 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
         <header className="flex flex-wrap items-center justify-between gap-4">
           <h2 id="optimization-heading" className="page-title">Optimization &amp; Compatibility</h2>
           <div className="flex flex-wrap items-center gap-2">
-            {data?.baseMod && data.baseMod.status !== 'ok' && (
+            {data?.baseMod && game.id !== 'ruina' && data.baseMod.status !== 'ok' && data.baseMod.nexusUrl && (
               <button
                 type="button"
                 className="ui-button text-xs"
@@ -202,10 +202,14 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
                 <div className="px-4 py-3">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">Loader Version</div>
                   <div className={`mt-1 text-sm font-semibold ${data.baseMod.status === 'ok' ? 'text-emerald-300' : 'text-accent'}`}>
-                    {data.baseMod.version || (data.baseMod.status === 'missing' ? 'Missing' : 'Ready')}
+                    {game.id === 'ruina'
+                      ? 'Not needed'
+                      : (data.baseMod.version || (data.baseMod.status === 'missing' ? 'Missing' : 'Ready'))}
                   </div>
                   <div className="mt-0.5 text-xs text-muted">
-                    {data.baseMod.harmonyVersion ? `Harmony ${data.baseMod.harmonyVersion}` : 'No Harmony DLL detected'}
+                    {game.id === 'ruina'
+                      ? 'Uses built-in -mod support'
+                      : (data.baseMod.harmonyVersion ? `Harmony ${data.baseMod.harmonyVersion}` : 'No Harmony DLL detected')}
                   </div>
                 </div>
 
