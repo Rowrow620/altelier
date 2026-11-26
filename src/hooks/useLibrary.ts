@@ -71,6 +71,11 @@ export function useLibrary(game: GameConfig, configLoading: boolean) {
     if (api) void run(game.id, () => api.toggleMod(game.id, modId, !enabled), 'Could not change the mod.');
   }
 
+  function toggleAll(enable: boolean) {
+    const api = window.atelierApi;
+    if (api) void run(game.id, () => api.toggleAllMods(game.id, enable), 'Could not update all mods.');
+  }
+
   function deleteMod(folderName: string) {
     const api = window.atelierApi;
     if (api) void run(game.id, () => api.deleteMod(game.id, folderName), 'Could not delete the mod.');
@@ -86,7 +91,7 @@ export function useLibrary(game: GameConfig, configLoading: boolean) {
 
   return {
     ...(libraries[game.id] ?? EMPTY_LIBRARY),
-    refreshMods, toggleMod, deleteMod, openFolder,
+    refreshMods, toggleMod, toggleAll, deleteMod, openFolder,
     dismissError: () => update(game.id, { error: null }),
   };
 }

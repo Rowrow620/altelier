@@ -20,16 +20,28 @@ export interface CatalogSearch extends CatalogFilters {
 
 export interface CatalogMod {
   id: string;
+  modId: number;
   name: string;
   author?: string;
   version?: string;
   summary?: string;
+  description?: string;
   thumbnailUrl?: string;
   category: string;
   downloads: number;
   endorsements: number;
   adult: boolean;
   url: string;
+}
+
+export interface CatalogModFile {
+  fileId: number;
+  name: string;
+  version: string;
+  sizeInBytes: number;
+  category: string;
+  description?: string;
+  uploadedAt?: string;
 }
 
 export interface CatalogResults {
@@ -97,18 +109,83 @@ export interface GameConfig {
   fallbackModsPath: string;
   baseModInstalled: boolean;
   enabledModIds: string[];
+  disabledWorkshopIds: string[];
+  launchArgs: string[];
+}
+
+export interface ModConflict {
+  path: string;
+  mods: string[];
+}
+
+export interface StorageSummary {
+  enabledCount: number;
+  enabledBytes: number;
+  disabledCount: number;
+  disabledBytes: number;
+  tempCount: number;
+  tempBytes: number;
+}
+
+export interface BaseModInfo {
+  status: 'ok' | 'missing' | 'outdated' | 'legacy-patch';
+  loaderName: string;
+  version: string;
+  harmonyVersion: string;
+  details: string;
+  nexusUrl: string;
+}
+
+export interface CompatibilityIssue {
+  id: string;
+  modName: string;
+  severity: 'warning';
+  message: string;
+  fixable: boolean;
+  fixLabel?: string;
+}
+
+export interface GameDiagnostics {
+  gameId: GameId;
+  validInstall: boolean;
+  modsPath: string;
+  isNativeModsDir: boolean;
+  baseModInstalled: boolean;
+  baseMod: BaseModInfo;
+  compatibility: CompatibilityIssue[];
+  issues: string[];
+  conflicts: ModConflict[];
+  storage: StorageSummary;
+}
+
+export interface SaveBackupEntry {
+  id: string;
+  gameId: GameId;
+  label: string;
+  createdAt: string;
+  fileCount: number;
+  totalBytes: number;
+}
+
+export interface SaveBackupsState {
+  gameId: GameId;
+  savePath: string;
+  saveExists: boolean;
+  backups: SaveBackupEntry[];
 }
 
 export interface AppConfig {
   activeGame: GameId;
   activeProfile: string;
+  nexusApiKey: string;
   profiles: string[];
   games: Record<GameId, GameConfig>;
 }
 
 export interface ConfigPatch {
   activeGame?: GameId;
-  games?: Partial<Record<GameId, { gamePath?: string; modsPath?: string }>>;
+  nexusApiKey?: string;
+  games?: Partial<Record<GameId, { gamePath?: string; modsPath?: string; launchArgs?: string[] }>>;
 }
 
 export interface AtelierApi {
@@ -120,14 +197,28 @@ export interface AtelierApi {
   detectGames: () => Promise<AppConfig>;
   saveProfile: (gameId: GameId, name: string) => Promise<AppConfig>;
   activateProfile: (gameId: GameId, name: string) => Promise<AppConfig>;
+  deleteProfile: (gameId: GameId, name: string) => Promise<AppConfig>;
+  exportProfile: (gameId: GameId, name: string) => Promise<boolean>;
+  importProfile: (gameId: GameId) => Promise<AppConfig | null>;
   searchCatalog: (request: CatalogSearch) => Promise<CatalogReply>;
+  getCatalogFiles: (gameId: GameId, modId: number) => Promise<CatalogModFile[]>;
+  downloadCatalogMod: (input: { gameId: GameId; modId: number; fileId: number; fileName?: string; nexusUrl: string; version?: string }) => Promise<ArchiveInstallResult>;
   getMods: (gameId: GameId) => Promise<Mod[]>;
   getModPreviews: (gameId: GameId, modId: string) => Promise<string[]>;
+  readModConfig: (gameId: GameId, modId: string) => Promise<string>;
+  saveModConfig: (gameId: GameId, modId: string, content: string) => Promise<void>;
   checkUpdates: (gameId: GameId) => Promise<UpdateResults>;
   saveModDetails: (gameId: GameId, modId: string, details: { nexusUrl: string; version: string }) => Promise<void>;
   toggleMod: (gameId: GameId, modId: string, enable: boolean) => Promise<Mod[] | false>;
+  toggleAllMods: (gameId: GameId, enable: boolean) => Promise<Mod[] | false>;
   deleteMod: (gameId: GameId, modId: string) => Promise<Mod[] | false>;
   openModFolder: (gameId: GameId, modId?: string) => Promise<boolean>;
+  getDiagnostics: (gameId: GameId) => Promise<GameDiagnostics>;
+  fixCompatibilityIssue: (gameId: GameId, issueId: string) => Promise<GameDiagnostics>;
+  cleanTempFolders: (gameId: GameId) => Promise<GameDiagnostics>;
+  getSaveBackups: (gameId: GameId) => Promise<SaveBackupsState>;
+  createSaveBackup: (gameId: GameId, label?: string) => Promise<SaveBackupsState>;
+  restoreSaveBackup: (gameId: GameId, backupId: string) => Promise<SaveBackupsState>;
   installModArchive: (gameId: GameId, filePath: string, options?: ArchiveInstallOptions) => Promise<ArchiveInstallResult>;
   installDroppedModArchive: (gameId: GameId, file: File, options?: ArchiveInstallOptions) => Promise<ArchiveInstallResult>;
   selectModArchive: () => Promise<string | null>;

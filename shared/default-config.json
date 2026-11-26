@@ -1,6 +1,7 @@
 {
   "activeGame": "lobotomy",
   "activeProfile": "Default",
+  "nexusApiKey": "",
   "profiles": ["Default", "Vanilla+", "Custom Run"],
   "games": {
     "lobotomy": {
@@ -15,7 +16,9 @@
       "modsPath": "",
       "fallbackModsPath": "",
       "baseModInstalled": false,
-      "enabledModIds": []
+      "enabledModIds": [],
+      "disabledWorkshopIds": [],
+      "launchArgs": []
     },
     "ruina": {
       "id": "ruina",
@@ -29,7 +32,9 @@
       "modsPath": "",
       "fallbackModsPath": "",
       "baseModInstalled": false,
-      "enabledModIds": []
+      "enabledModIds": [],
+      "disabledWorkshopIds": [],
+      "launchArgs": []
     }
   }
 }

@@ -244,6 +244,68 @@ function createInstallService({ store, getGameModsDir, activation = () => 'setti
     }
   }
 
+  function toggleAll(gameId, enabled) {
+    if (typeof enabled !== 'boolean') throw new Error('Invalid enabled state.');
+    begin(gameId);
+    try {
+      const root = rootFor(gameId);
+      const mode = activation(store.read().games[gameId], root);
+      if (mode === 'manual') throw new Error('Use the game or its mod manager to change these mods.');
+      const inactive = inactiveDirectory(root);
+      const targets = [];
+      for (const folder of [root, inactive].filter(Boolean)) {
+        for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
+          if (!entry.isDirectory() || entry.name.startsWith('.atelier-')) continue;
+          const isCurrentlyEnabled = folder === root && stableName(entry.name) === entry.name;
+          if (isCurrentlyEnabled !== enabled) targets.push(childPath(folder, entry.name));
+        }
+      }
+      for (const target of targets) {
+        if (mode === 'native') {
+          assertSafeTree(target);
+          moveMod(target, root, enabled);
+        } else {
+          setMembership(gameId, stableName(path.basename(target)), enabled);
+        }
+      }
+    } finally {
+      busy.delete(gameId);
+    }
+  }
+
+  function readConfigText(gameId, modId) {
+    const target = folder(gameId, validateName(modId));
+    assertSafeTree(target);
+    const configPath = childPath(target, 'config.txt');
+    const stat = existingStat(configPath);
+    if (!stat || !stat.isFile()) throw new Error('No config.txt file was found for this mod.');
+    if (stat.size > 128 * 1024) throw new Error('config.txt exceeds the 128 KB limit.');
+    return fs.readFileSync(configPath, 'utf8');
+  }
+
+  function saveConfigText(gameId, modId, content) {
+    if (typeof content !== 'string' || Buffer.byteLength(content, 'utf8') > 128 * 1024) {
+      throw new Error('config.txt content must be 128 KB or less.');
+    }
+    begin(gameId);
+    try {
+      const target = folder(gameId, validateName(modId));
+      assertSafeTree(target);
+      const configPath = childPath(target, 'config.txt');
+      const stat = existingStat(configPath);
+      if (!stat || !stat.isFile()) throw new Error('No config.txt file was found for this mod.');
+      const tmp = path.join(target, `.atelier-cfg-${randomUUID()}.tmp`);
+      try {
+        fs.writeFileSync(tmp, content, 'utf8');
+        fs.renameSync(tmp, configPath);
+      } finally {
+        fs.rmSync(tmp, { force: true });
+      }
+    } finally {
+      busy.delete(gameId);
+    }
+  }
+
   function folder(gameId, modId) {
     const root = rootFor(gameId);
     const directory = modId === undefined ? root : findMod(gameId, root, modId);
@@ -284,8 +346,8 @@ function createInstallService({ store, getGameModsDir, activation = () => 'setti
     if (busy.size) throw new Error('Wait for the current mod operation to finish.');
     const game = store.read().games[validateGameId(gameId)];
     const directory = getGameModsDir(game);
-    if (!directory || activation(game, directory) !== 'native' || !existingStat(directory)?.isDirectory()) {
-      throw new Error('Profiles require the game’s native mods folder.');
+    if (!directory || !existingStat(directory)?.isDirectory()) {
+      throw new Error('Choose a valid mods folder in Settings.');
     }
     const root = modsRoot(directory);
     const inactive = inactiveDirectory(root);
@@ -317,7 +379,10 @@ function createInstallService({ store, getGameModsDir, activation = () => 'setti
     for (const move of moves) moveMod(move.path, root, move.enabled);
   }
 
-  return { install, deleteMod, toggle, folder, saveDetails, recover, prepareLaunch, profileState, applyProfile, isBusy: () => busy.size > 0 };
+  return {
+    install, deleteMod, toggle, toggleAll, folder, saveDetails, readConfigText, saveConfigText,
+    recover, prepareLaunch, profileState, applyProfile, isBusy: () => busy.size > 0,
+  };
 }
 
 function listExistingFiles(root) {

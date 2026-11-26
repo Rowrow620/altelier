@@ -76,6 +76,7 @@ const SEARCH_MODS = `
         author
         version
         summary
+        description
         category
         adultContent
         downloads
@@ -87,16 +88,30 @@ const SEARCH_MODS = `
   }
 `;
 
+function cleanDescription(text) {
+  if (typeof text !== 'string' || !text.trim()) return undefined;
+  return text
+    .replace(/\[br\s*\/?\]/gi, '\n')
+    .replace(/\[\/?(?:b|i|u|s|center|quote|code|list|\*|size(?:=[^\]]*)?|color(?:=[^\]]*)?|font(?:=[^\]]*)?|url(?:=[^\]]*)?|img)\]/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, 6000);
+}
+
 function toCatalogMod(node, gameId, domain) {
   const thumbnailUrl = [node.thumbnailLargeUrl, node.thumbnailUrl].find(
     (url) => url && IMAGE_CDNS.some((base) => url.startsWith(base)),
   );
   return {
     id: `nexus:${gameId}:${node.modId}`,
+    modId: node.modId,
     name: node.name,
     author: node.author || undefined,
     version: node.version || undefined,
     summary: node.summary || undefined,
+    description: cleanDescription(node.description),
     category: node.category,
     adult: node.adultContent === true,
     downloads: node.downloads,
@@ -194,4 +209,74 @@ async function lookupNexusReleases(gameId, ids, request = fetch) {
     }));
 }
 
-module.exports = { searchNexus, lookupNexusReleases, createNexusRequest, NexusRateLimitError };
+const MOD_FILES = `
+  query AtelierModFiles($modId: ID!, $gameId: ID!) {
+    modFiles(modId: $modId, gameId: $gameId) {
+      fileId
+      name
+      version
+      sizeInBytes
+      category
+      description
+      date
+    }
+  }
+`;
+
+const CATEGORY_ORDER = { MAIN: 0, UPDATE: 1, OPTIONAL: 2, MISCELLANEOUS: 3 };
+
+async function getNexusModFiles(gameId, modId, request = fetch) {
+  if (!Number.isSafeInteger(modId) || modId <= 0) throw new Error('Invalid Nexus mod ID.');
+  const nexusGameId = games[gameId].nexusGameId;
+  const payload = await requestGraphQL(MOD_FILES, { modId: String(modId), gameId: String(nexusGameId) }, request);
+  const files = payload.data?.modFiles;
+  if (payload.errors?.length || !Array.isArray(files)) {
+    throw new Error('Could not load mod files from Nexus Mods.');
+  }
+  return files
+    .filter((file) => Number.isSafeInteger(file?.fileId) && file.fileId > 0 &&
+      !['ARCHIVED', 'REMOVED', 'OLD_VERSION'].includes(file.category))
+    .map((file) => ({
+      fileId: file.fileId,
+      name: String(file.name || `File #${file.fileId}`),
+      version: String(file.version || ''),
+      sizeInBytes: Number(file.sizeInBytes) || 0,
+      category: String(file.category || 'MAIN'),
+      description: cleanDescription(file.description),
+      uploadedAt: file.date ? new Date(Number(file.date) * 1000).toISOString() : undefined,
+    }))
+    .sort((left, right) => {
+      const rank = (CATEGORY_ORDER[left.category] ?? 9) - (CATEGORY_ORDER[right.category] ?? 9);
+      return rank !== 0 ? rank : right.fileId - left.fileId;
+    });
+}
+
+async function getNexusDownloadLink(domain, modId, fileId, apiKey, request = fetch) {
+  if (!apiKey) {
+    throw new Error('Add a Nexus Mods Premium API key in Settings to download mods directly.');
+  }
+  const url = `https://api.nexusmods.com/v1/games/${encodeURIComponent(domain)}/mods/${modId}/files/${fileId}/download_link.json`;
+  const response = await request(url, {
+    headers: {
+      Accept: 'application/json',
+      apikey: apiKey,
+      'Application-Name': 'Atelier Mod Manager',
+      'Application-Version': version,
+    },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (response.status === 429) throw new NexusRateLimitError(response.headers.get('Retry-After'));
+  if (response.status === 401 || response.status === 403) {
+    throw new Error('Nexus Mods rejected the API key or requires a Premium account for direct downloads.');
+  }
+  if (!response.ok) throw new Error('Nexus Mods returned HTTP ' + response.status);
+  const links = await response.json();
+  const uri = Array.isArray(links) ? links.find((item) => typeof item?.URI === 'string' && item.URI.startsWith('https://'))?.URI : undefined;
+  if (!uri) throw new Error('Nexus Mods did not return a download link.');
+  return uri;
+}
+
+module.exports = {
+  searchNexus, lookupNexusReleases, getNexusModFiles, getNexusDownloadLink,
+  createNexusRequest, NexusRateLimitError,
+};

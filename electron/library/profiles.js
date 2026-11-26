@@ -114,7 +114,77 @@ function createProfileService({ store, installer, journalPath }) {
     return result;
   }
 
-  return { activate, save, recover };
+  function remove(input, requestedGame) {
+    recover();
+    const name = profileName(input);
+    const gameId = validateGameId(requestedGame);
+    if (name === 'Default') throw new Error('The Default profile cannot be deleted.');
+    const config = store.read();
+    if (!config.profiles.includes(name)) throw new Error('Choose an existing profile.');
+    if (config.gameProfiles[gameId] === name) {
+      activate('Default', gameId);
+    }
+    return store.update((next) => {
+      next.profiles = next.profiles.filter((item) => item !== name);
+      next.profileSnapshots = next.profileSnapshots.filter((entry) => entry.name !== name);
+      for (const id of Object.keys(next.gameProfiles)) {
+        if (next.gameProfiles[id] === name) next.gameProfiles[id] = next.profiles[0] ?? 'Default';
+      }
+    });
+  }
+
+  function exportData(requestedGame, input) {
+    recover();
+    const name = profileName(input);
+    const gameId = validateGameId(requestedGame);
+    const config = store.read();
+    if (!config.profiles.includes(name)) throw new Error('Choose an existing profile.');
+    const snapshot = config.profileSnapshots.find((entry) => entry.gameId === gameId && entry.name === name);
+    const enabledModIds = snapshot?.enabled ?? (config.gameProfiles[gameId] === name
+      ? [...installer.profileState(gameId).mods.values()].filter((mod) => mod.enabled).map((mod) => mod.name)
+      : []);
+    return {
+      version: 1,
+      gameId,
+      profile: name,
+      exportedAt: new Date().toISOString(),
+      enabledModIds,
+    };
+  }
+
+  function importData(requestedGame, rawData) {
+    recover();
+    const gameId = validateGameId(requestedGame);
+    if (!rawData || typeof rawData !== 'object' || Array.isArray(rawData)) {
+      throw new Error('Invalid profile file.');
+    }
+    if (rawData.gameId !== undefined && validateGameId(rawData.gameId) !== gameId) {
+      throw new Error(`This profile belongs to ${rawData.gameId}, not ${gameId}.`);
+    }
+    const name = profileName(rawData.profile);
+    if (!Array.isArray(rawData.enabledModIds) || rawData.enabledModIds.length > 10000) {
+      throw new Error('Invalid mod list in profile file.');
+    }
+    const desired = [...new Set(rawData.enabledModIds.map(validateName))];
+    const { root, mods } = installer.profileState(gameId);
+    const desiredKeys = new Set(desired.map((item) => item.toLowerCase()));
+    const snapshot = {
+      gameId,
+      name,
+      root,
+      enabled: [...mods.values()].filter((mod) => desiredKeys.has(mod.name.toLowerCase())).map((mod) => mod.name),
+    };
+    const nextConfig = store.update((next) => {
+      if (!next.profiles.includes(name)) {
+        if (next.profiles.length >= 100) throw new Error('The library already has 100 profiles.');
+        next.profiles.push(name);
+      }
+      storeSnapshot(next, snapshot);
+    });
+    return activate(name, gameId) || nextConfig;
+  }
+
+  return { activate, save, remove, exportData, importData, recover };
 }
 
 module.exports = { createProfileService };

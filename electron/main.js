@@ -4,11 +4,14 @@ const { createConfigStore } = require('./config/store');
 const { createInstallService } = require('./install/service');
 const { registerIpc, externalUrl } = require('./ipc/register');
 const { createCatalogService } = require('./catalog/service');
-const { searchNexus, lookupNexusReleases, createNexusRequest } = require('./catalog/nexus');
+const { searchNexus, lookupNexusReleases, getNexusModFiles, createNexusRequest } = require('./catalog/nexus');
+const { createDownloadService } = require('./catalog/download');
 const { createGameService, getModsDirectory, isNativeModsDirectory, installWarnings } = require('./games/service');
 const { createLibrary } = require('./library/scan');
 const { createProfileService } = require('./library/profiles');
 const { createUpdateService } = require('./library/updates');
+const { createDiagnosticsService } = require('./library/diagnostics');
+const { createBackupService } = require('./library/backups');
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 const debugLogging = isDevelopment || process.argv.includes('--atelier-debug');
@@ -28,13 +31,13 @@ const searchCatalog = createCatalogService({
 const store = createConfigStore(configFilePath);
 const gameService = createGameService({ store });
 const rendererFile = path.join(__dirname, '..', 'dist', 'index.html');
-const iconPath = path.join(__dirname, '..', 'src', 'assets', 'app-icon.jpg');
+const iconPath = path.join(__dirname, '..', 'src', 'assets', 'app-icon.png');
 const devUrl = isDevelopment ? 'http://localhost:5173' : undefined;
 const installer = createInstallService({
   store,
   getGameModsDir: getModsDirectory,
   installWarnings,
-  activation: (game, directory) => isNativeModsDirectory(game, directory) ? 'native' : 'manual',
+  activation: () => 'native',
   confirmReplace: async (name) => {
     const result = await dialog.showMessageBox(mainWindow, {
       type: 'question',
@@ -56,6 +59,14 @@ const profiles = createProfileService({
 const checkUpdates = createUpdateService({
   store, library, lookup: (gameId, ids) => lookupNexusReleases(gameId, ids, nexusRequest),
 });
+const diagnostics = createDiagnosticsService({
+  store,
+  installer,
+  workshopDirectories: gameService.workshopDirectories,
+});
+const backups = createBackupService({ backupsRoot: path.join(userDataPath, 'save-backups') });
+const catalogFiles = (gameId, modId) => getNexusModFiles(gameId, modId, nexusRequest);
+const downloadCatalogMod = createDownloadService({ store, installer, nexusRequest }).downloadAndInstall;
 
 function createWindow(icon) {
   mainWindow = new BrowserWindow({
@@ -64,7 +75,7 @@ function createWindow(icon) {
     minWidth: 1000,
     minHeight: 680,
     frame: false,
-    backgroundColor: '#0b0c10',
+    backgroundColor: '#09090b',
     icon: icon.isEmpty() ? undefined : icon,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -137,5 +148,6 @@ app.on('window-all-closed', () => {
 
 registerIpc({
   ipcMain, getWindow: () => mainWindow, rendererFile, devUrl,
-  store, installer, gameService, library, profiles, checkUpdates, searchCatalog, dialog, shell,
+  store, installer, gameService, library, profiles, checkUpdates, searchCatalog,
+  catalogFiles, downloadCatalogMod, diagnostics, backups, dialog, shell,
 });

@@ -3,7 +3,7 @@ const path = require('node:path');
 const { games } = require('../../shared/default-config.json');
 const { readSmallFile } = require('../files/read');
 const { childPath, existingStat, modsRoot } = require('../files/paths');
-const { getModsDirectory, isNativeModsDirectory } = require('../games/service');
+const { getModsDirectory } = require('../games/service');
 const { inactiveDirectory, stableName } = require('../install/activation');
 const { metadata, readRecord } = require('../install/record');
 
@@ -123,11 +123,11 @@ function createLibrary({ store, workshopDirectories, localFolder }) {
   function scan(game) {
     const directory = getModsDirectory(game);
     const root = directory && existingStat(directory)?.isDirectory() ? modsRoot(directory) : '';
-    const isNative = isNativeModsDirectory(game, root);
-    const inactive = isNative && inactiveDirectory(root);
+    const inactive = root && inactiveDirectory(root);
+    const disabledWorkshop = new Set(game.disabledWorkshopIds ?? []);
     const result = [
       ...listFolders(root).map((folder) => describe(game, folder, 'local',
-        isNative ? stableName(path.basename(folder)) === path.basename(folder) : null)),
+        stableName(path.basename(folder)) === path.basename(folder))),
       ...listFolders(inactive).map((folder) => describe(game, folder, 'local', false)),
     ];
     const items = new Set();
@@ -136,7 +136,7 @@ function createLibrary({ store, workshopDirectories, localFolder }) {
         const id = path.basename(folder);
         if (items.has(id)) continue;
         items.add(id);
-        result.push(describe(game, folder, 'workshop', null));
+        result.push(describe(game, folder, 'workshop', !disabledWorkshop.has(id)));
       }
     }
     return result.sort((left, right) => left.name.localeCompare(right.name));

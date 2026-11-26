@@ -6,6 +6,38 @@ const { validateName, validateGameId, validatePath } = require('../files/paths')
 
 const gameIds = Object.keys(DEFAULT_CONFIG.games);
 
+function normalizeLaunchArgs(args) {
+  if (args === undefined) return [];
+  if (!Array.isArray(args) || args.length > 16) throw new Error('Invalid launch options.');
+  const result = [];
+  for (const arg of args) {
+    if (typeof arg !== 'string') throw new Error('Invalid launch option.');
+    const trimmed = arg.trim();
+    if (!trimmed || trimmed.length > 64 || /[\u0000-\u001f;&|<>`$]/.test(trimmed)) {
+      throw new Error('Invalid launch option.');
+    }
+    if (!result.includes(trimmed)) result.push(trimmed);
+  }
+  return result;
+}
+
+function normalizeApiKey(value) {
+  if (value === undefined) return '';
+  if (typeof value !== 'string') throw new Error('Invalid Nexus API key.');
+  const trimmed = value.trim();
+  if (trimmed.length > 256 || /[\s\u0000-\u001f]/.test(trimmed)) {
+    throw new Error('Invalid Nexus API key.');
+  }
+  return trimmed;
+}
+
+function normalizeWorkshopIds(ids) {
+  if (ids === undefined) return [];
+  if (!Array.isArray(ids) || ids.length > 10000 || ids.some((id) => typeof id !== 'string' || !/^\d{1,20}$/.test(id))) {
+    throw new Error('Invalid Workshop mod list in settings.');
+  }
+  return [...new Set(ids)];
+}
 function profileName(value) {
   if (typeof value !== 'string' || !value.trim() || value.length > 100 || /[\u0000-\u001f]/.test(value)) {
     throw new Error('Enter a profile name up to 100 characters.');
@@ -19,6 +51,7 @@ function normalizeConfig(data) {
   config.schemaVersion = 1;
   if (data.schemaVersion && data.schemaVersion !== 1) throw new Error('Unsupported settings version.');
   if (data.activeGame !== undefined) config.activeGame = validateGameId(data.activeGame);
+  if (data.nexusApiKey !== undefined) config.nexusApiKey = normalizeApiKey(data.nexusApiKey);
   if (data.profiles !== undefined) {
     if (!Array.isArray(data.profiles) || !data.profiles.length ||
       data.profiles.some((name) => typeof name !== 'string' || !name.trim() || name.length > 100)) {
@@ -40,6 +73,8 @@ function normalizeConfig(data) {
       if (!Array.isArray(stored.enabledModIds)) throw new Error('Invalid enabled mods in settings.');
       game.enabledModIds = [...new Set(stored.enabledModIds.map(validateName))];
     }
+    game.disabledWorkshopIds = normalizeWorkshopIds(stored.disabledWorkshopIds);
+    game.launchArgs = normalizeLaunchArgs(stored.launchArgs);
   }
   config.activeProfile = config.gameProfiles[config.activeGame];
   config.profileSnapshots = [];
@@ -100,11 +135,12 @@ function createConfigStore(filePath, persist = writeAtomic) {
 
   function patch(input) {
     if (!input || typeof input !== 'object' || Array.isArray(input) ||
-      Object.keys(input).some((key) => !['activeGame', 'activeProfile', 'games'].includes(key))) {
+      Object.keys(input).some((key) => !['activeGame', 'activeProfile', 'nexusApiKey', 'games'].includes(key))) {
       throw new Error('Invalid settings change.');
     }
     return update((config) => {
       if (input.activeGame !== undefined) config.activeGame = validateGameId(input.activeGame);
+      if (input.nexusApiKey !== undefined) config.nexusApiKey = normalizeApiKey(input.nexusApiKey);
       if (input.activeProfile !== undefined) {
         if (!config.profiles.includes(input.activeProfile)) throw new Error('Choose an existing profile.');
         config.gameProfiles[config.activeGame] = input.activeProfile;
@@ -114,10 +150,13 @@ function createConfigStore(filePath, persist = writeAtomic) {
         for (const [id, change] of Object.entries(input.games)) {
           validateGameId(id);
           if (!change || typeof change !== 'object' || Array.isArray(change) ||
-            Object.keys(change).some((key) => !['gamePath', 'modsPath'].includes(key))) {
-            throw new Error('Only game and mods folders can be changed here.');
+            Object.keys(change).some((key) => !['gamePath', 'modsPath', 'launchArgs'].includes(key))) {
+            throw new Error('Only game and mods folders or launch options can be changed here.');
           }
-          for (const [field, value] of Object.entries(change)) config.games[id][field] = validatePath(value);
+          for (const [field, value] of Object.entries(change)) {
+            if (field === 'launchArgs') config.games[id].launchArgs = normalizeLaunchArgs(value);
+            else config.games[id][field] = validatePath(value);
+          }
         }
       }
     });

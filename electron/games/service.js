@@ -98,7 +98,7 @@ function createGameService({ store, steam = createSteamDiscovery(), start = star
     const game = store.read().games[gameId];
     const plan = adapters[game.id].launchPlan(game, modded);
     prepare(gameId, modded);
-    await start(plan);
+    await start({ ...plan, args: [...(plan.args ?? []), ...(game.launchArgs ?? [])] });
     return plan.message ?? 'Launch requested for ' + game.name + '.';
   }
 

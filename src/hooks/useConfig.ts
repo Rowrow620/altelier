@@ -79,8 +79,41 @@ export function useConfig() {
     await enqueue(() => api.saveProfile(gameId, name));
   }
 
+  async function deleteProfile(gameId: GameId, name: string) {
+    const api = window.atelierApi;
+    setError(null);
+    if (!api) return;
+    try {
+      await enqueue(() => api.deleteProfile(gameId, name));
+    } catch (cause) {
+      setError(errorMessage(cause, 'Could not delete the profile.'));
+    }
+  }
+
+  async function exportProfile(gameId: GameId, name: string) {
+    const api = window.atelierApi;
+    setError(null);
+    if (!api) return;
+    try {
+      await api.exportProfile(gameId, name);
+    } catch (cause) {
+      setError(errorMessage(cause, 'Could not export the profile.'));
+    }
+  }
+
+  async function importProfile(gameId: GameId) {
+    const api = window.atelierApi;
+    setError(null);
+    if (!api) return;
+    try {
+      await enqueue(async () => (await api.importProfile(gameId)) ?? config);
+    } catch (cause) {
+      setError(errorMessage(cause, 'Could not import the profile.'));
+    }
+  }
+
   return {
     config, loading, error, dismissError: () => setError(null), selectGame, saveConfig, detectGames,
-    activateProfile, saveProfile,
+    activateProfile, saveProfile, deleteProfile, exportProfile, importProfile,
   };
 }
