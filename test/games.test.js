@@ -65,7 +65,7 @@ test('finds games and Workshop items in a secondary Steam library through the ma
   assert.equal(mod.id, 'workshop:12345');
   assert.equal(mod.name, 'Maps & Cards');
   assert.equal(mod.version, '1.1');
-  assert.equal(mod.enabled, null);
+  assert.equal(mod.enabled, true);
   assert.equal(mod.source, 'workshop');
   assert.equal(externalUrl(mod.workshopUrl), mod.workshopUrl);
   assert.throws(() => externalUrl('https://steamcommunity.com/sharedfiles/filedetails/?id=12345&other=unsafe'));

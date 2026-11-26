@@ -11,7 +11,7 @@ test('packaging config references existing entrypoints and build icons', () => {
   assert.equal(fs.existsSync(path.join(root, pkg.main)), true);
   assert.equal(fs.existsSync(path.join(root, pkg.build.win.icon)), true);
   assert.equal(fs.existsSync(path.join(root, pkg.build.directories.buildResources, 'icon.png')), true);
-  assert.equal(fs.existsSync(path.join(root, 'src', 'assets', 'app-icon.jpg')), true);
+  assert.equal(fs.existsSync(path.join(root, 'src', 'assets', 'app-icon.png')), true);
 });
 
 test('all modal dialogs use native <dialog> without blocking browser dialogs', () => {
@@ -19,6 +19,7 @@ test('all modal dialogs use native <dialog> without blocking browser dialogs', (
     'src/components/ModDetailsModal.tsx',
     'src/components/InstallModal.tsx',
     'src/components/SaveProfileDialog.tsx',
+    'src/components/browse/CatalogDetailsModal.tsx',
   ];
 
   for (const relPath of modalFiles) {

@@ -270,7 +270,8 @@ test('only accepts app messages from the expected main frame and validates exter
   registerIpc({ ipcMain: { handle: (channel, action) => handlers.set(channel, action) }, getWindow: () => window, rendererFile: file });
   assert.throws(() => handlers.get('window:close')(event), /Untrusted/);
   assert.equal(externalUrl('https://www.nexusmods.com/lobotomycorporation/mods/2'), 'https://www.nexusmods.com/lobotomycorporation/mods/2');
-  for (const url of ['file:///C:/Windows', 'javascript:alert(1)', 'https://nexusmods.com.attacker.example', 'https://user@nexusmods.com']) {
+  assert.equal(externalUrl('https://github.com/Rowrow620/altelier'), 'https://github.com/Rowrow620/altelier');
+  for (const url of ['file:///C:/Windows', 'javascript:alert(1)', 'https://nexusmods.com.attacker.example', 'https://user@nexusmods.com', 'https://github.com/attacker/repo']) {
     assert.throws(() => externalUrl(url));
   }
 });
