@@ -9,6 +9,13 @@ Windows desktop mod manager for **Lobotomy Corporation** and **Library of Ruina*
 
 ![Atelier Mod Manager Browse View](docs/browse-preview.jpg)
 
+## Download
+
+Grab the Windows x64 build from [Releases](https://github.com/Rowrow620/altelier/releases):
+
+- **Atelier Mod Manager Setup 1.0.0.exe** — Windows installer (Start Menu and desktop shortcuts)
+- **Atelier Mod Manager Portable 1.0.0.exe** — standalone `.exe`, no installation required
+
 ## What it does
 
 - Detects Steam installs for Lobotomy Corporation and Library of Ruina, with support for custom mod folders (including Lobotomy Mod Manager).
@@ -17,18 +24,18 @@ Windows desktop mod manager for **Lobotomy Corporation** and **Library of Ruina*
 - Optimization tab checks BaseMod/Harmony setup health, fixes nested or outdated mod folder layouts, lists overlapping files between enabled mods, backs up/restores Unity saves, and configures `-popupwindow` / `-nolog` launch flags.
 - Launch modded or vanilla directly from the sidebar.
 
-## Running and building
+## Building from source
 
-Download the Windows installer from [Releases](https://github.com/Rowrow620/altelier/releases), or run from source with Node.js and `pnpm`:
+Requires Node.js and `pnpm`:
 
 ```bash
 pnpm install
 pnpm run dev          # run Electron + Vite in dev mode
 pnpm run check        # typecheck, test suite, and production build
-pnpm run package:win  # build Windows NSIS installer into release/
+pnpm run package:win  # build Windows installer and portable .exe into release/
 ```
 
-To launch an already-built copy without a terminal window on Windows, open `Launch Atelier.wsf` (or run `pnpm start`). Clicking the tray icon brings the window back to focus.
+To open a local source build without a terminal window on Windows, double-click `Launch Atelier.wsf` (or run `pnpm start`). Clicking the tray icon brings the window back to focus.
 
 ## Notes
 
