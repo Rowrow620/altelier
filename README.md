@@ -83,12 +83,6 @@ Nexus Browse uses its public API. It sends Atelier's name and version, keeps a
 local cache, and excludes listings without a confirmed non-adult classification.
 Downloads start on Nexus Mods in the browser. Atelier imports ZIP files from disk.
 
-Before public distribution, submit a test build to Nexus Mods for registration.
-Ask Nexus to confirm the anonymous Browse flow and cache policy for the public
-build. For future downloads, use the official download API for Premium and
-the Nexus website's **Download with Manager** handoff for free accounts.
-[Nexus Mods API Acceptable Use Policy](https://help.nexusmods.com/article/114-api-acceptable-use-policy)
-
 ### Game folders and launch modes
 
 - **Lobotomy Corporation** uses a BaseMod install for native mods. If the game
