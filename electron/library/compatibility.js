@@ -130,47 +130,27 @@ function detectBaseModInfo(game) {
     };
   }
 
-  // Library of Ruina
-  const nexusUrl = 'https://www.nexusmods.com/libraryofruina/mods/?keyword=BaseMod';
+  // Library of Ruina uses native -mod support (no BaseMod/Harmony loader needed)
   if (!game.gamePath) {
     return {
       status: 'missing',
-      loaderName: 'BaseMod for Workshop / Native (-mod)',
-      version: '',
+      loaderName: 'Not needed',
+      version: 'Not needed',
       harmonyVersion: '',
       details: 'Game folder is not configured in Settings.',
-      nexusUrl,
+      nexusUrl: '',
     };
   }
-  const legacyManaged = path.join(game.gamePath, 'LibraryOfRuina_Data', 'Managed', 'BaseMod');
-  if (existingStat(legacyManaged)?.isDirectory()) {
-    return {
-      status: 'legacy-patch',
-      loaderName: 'Legacy Managed BaseMod',
-      version: '',
-      harmonyVersion: '',
-      details: 'Legacy BaseMod patch found in Managed/BaseMod. Use a clean install with -mod / BaseMod for Workshop.',
-      nexusUrl,
-    };
-  }
-  const modsDir = ruina.nativeMods(game);
-  const localBaseModDir = modsDir && existingStat(path.join(modsDir, 'BaseMod'))?.isDirectory()
-    ? path.join(modsDir, 'BaseMod')
-    : '';
-  const hasNative = ruina.loaderInstalled(game);
-  const infoText = localBaseModDir ? (readSmallFile(path.join(localBaseModDir, 'Info.txt'), 16 * 1024)?.toString('utf8') ?? '') : '';
-  const xmlText = localBaseModDir ? (readSmallFile(path.join(localBaseModDir, 'StageModInfo.xml'), 16 * 1024)?.toString('utf8') ?? '') : '';
-  const versionMatch = infoText.match(/^\s*Version\s*:\s*(.+)$/mi)?.[1]?.trim() || xmlText.match(/<Version>([^<]+)<\/Version>/i)?.[1]?.trim() || '';
-
+  const hasExecutableInstall = ruina.validInstall(game);
   return {
-    status: hasNative ? 'ok' : 'missing',
-    loaderName: localBaseModDir ? 'BaseMod (Mods folder)' : 'Library of Ruina Native (-mod)',
-    version: versionMatch,
+    status: hasExecutableInstall ? 'ok' : 'missing',
+    loaderName: 'Not needed',
+    version: 'Not needed',
     harmonyVersion: '',
-    details: hasNative
-      ? (localBaseModDir ? 'Native Mods folder and local BaseMod detected.' : 'Native LibraryOfRuina_Data/Mods folder is ready.')
-      : 'LibraryOfRuina_Data/Mods was not found.',
-    nexusUrl,
+    details: hasExecutableInstall
+      ? 'Native -mod support ready.'
+      : 'Game executable not found in configured folder.',
+    nexusUrl: '',
   };
 }
 
