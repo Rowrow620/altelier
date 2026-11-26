@@ -34,10 +34,11 @@ async function readCache(cachePath, now) {
       if (!Array.isArray(entry) || entry.length !== 2) continue;
       const [key, page] = entry;
       if (!isPublicPage(key, page)) continue;
-      // Older versions did not always include the timestamp.
-      const fetchedAt = page.fetchedAt ?? mtime.toISOString();
-      const age = now() - Date.parse(fetchedAt);
-      if (age >= 0 && age < KEEP_FOR) {
+      // Older versions did not always include the timestamp; clamp filesystem mtime against clock skew.
+      const currentTime = now();
+      const fetchedAt = page.fetchedAt ?? new Date(Math.min(currentTime, mtime.getTime())).toISOString();
+      const age = currentTime - Date.parse(fetchedAt);
+      if (age >= -5000 && age < KEEP_FOR) {
         entries.set(key, { ...page, fetchedAt, categories: page.categories ?? [] });
       }
     }

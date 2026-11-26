@@ -199,3 +199,23 @@ test('backs off across games after Nexus sends Retry-After and serves matching c
   assert.equal((await catalog(otherGame)).freshness, 'live');
   assert.equal(requests, 3);
 });
+
+test('keeps legacy cache entries when filesystem mtime is ahead of system clock', async (t) => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'atelier-catalog-test-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const cachePath = path.join(directory, 'catalog.json');
+  const request = {
+    gameId: 'ruina', query: '', page: 1, searchIn: 'all', category: '', sort: 'downloads',
+  };
+  const page = { mods: [{ id: 'public', adult: false }], totalCount: 1, hasNextPage: false };
+  await writeFile(cachePath, JSON.stringify([[JSON.stringify({ ...request, showAdult: false }), page]]));
+
+  const skewedNow = Date.now() - 50;
+  const offline = createCatalogService({
+    cachePath,
+    now: () => skewedNow,
+    search: async () => { throw new Error('Offline'); },
+  });
+
+  assert.deepEqual((await offline(request)).mods, page.mods);
+});
