@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
 import { BrowseOnlineView } from './components/BrowseOnlineView';
+import { OptimizationView } from './components/OptimizationView';
 import { InstallModal } from './components/InstallModal';
 import { SettingsModal } from './components/SettingsModal';
 import { ModDetailsModal } from './components/ModDetailsModal';
@@ -23,7 +24,8 @@ export function App() {
   const { config } = settings;
   const currentGame = config.games[config.activeGame];
   const library = useLibrary(currentGame, settings.loading);
-  const [activeTab, setActiveTab] = useState<'mods' | 'browse' | 'settings'>('mods');
+  const [activeTab, setActiveTab] = useState<'mods' | 'browse' | 'optimization' | 'settings'>('mods');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedModId, setSelectedModId] = useState<string | null>(null);
   const [install, setInstall] = useState<{ gameId: GameId; replacement?: Mod } | null>(null);
   const [savingProfileFor, setSavingProfileFor] = useState<GameId | null>(null);
@@ -73,34 +75,46 @@ export function App() {
         Skip to content
       </a>
       <Header
-        activeCount={loadingMods || hasExternallyManagedMods ? undefined : activeCount}
         profiles={config.profiles}
         activeProfile={config.activeProfile}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((open) => !open)}
         onSelectProfile={(activeProfile) => {
           setSelectedModId(null);
           void settings.activateProfile(currentGame.id, activeProfile);
         }}
         onSaveProfile={() => setSavingProfileFor(currentGame.id)}
-        onLaunch={launchGame}
-        launching={settings.loading || launch?.status === 'launching'}
+        onDeleteProfile={() => {
+          setSelectedModId(null);
+          void settings.deleteProfile(currentGame.id, config.activeProfile);
+        }}
+        onExportProfile={() => void settings.exportProfile(currentGame.id, config.activeProfile)}
+        onImportProfile={() => {
+          setSelectedModId(null);
+          void settings.importProfile(currentGame.id).then(() => library.refreshMods(currentGame.id, false));
+        }}
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        <Sidebar
-          activeGameId={config.activeGame}
-          onSelectGame={(activeGame) => {
-            setSelectedModId(null);
-            void settings.selectGame(activeGame);
-          }}
-          games={config.games}
-          activeTab={activeTab}
-          onSelectTab={(tab) => {
-            setSelectedModId(null);
-            setActiveTab(tab);
-          }}
-          onImport={() => setInstall({ gameId: currentGame.id })}
-          onOpenFolder={() => library.openFolder()}
-        />
+        {sidebarOpen && (
+          <Sidebar
+            activeGameId={config.activeGame}
+            onSelectGame={(activeGame) => {
+              setSelectedModId(null);
+              void settings.selectGame(activeGame);
+            }}
+            games={config.games}
+            activeTab={activeTab}
+            onSelectTab={(tab) => {
+              setSelectedModId(null);
+              setActiveTab(tab);
+            }}
+            onOpenFolder={() => library.openFolder()}
+            activeCount={loadingMods || hasExternallyManagedMods ? undefined : activeCount}
+            onLaunch={launchGame}
+            launching={settings.loading || launch?.status === 'launching'}
+          />
+        )}
 
         <main id="main-content" tabIndex={-1} className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-workspace focus:outline-none">
           {operationError && (
@@ -122,12 +136,25 @@ export function App() {
               mods={mods}
               loading={loadingMods}
               onToggleMod={library.toggleMod}
+              onToggleAll={library.toggleAll}
               onOpenFolder={library.openFolder}
               onDeleteMod={library.deleteMod}
               onViewDetails={(mod) => setSelectedModId(mod.id)}
+              onImport={() => setInstall({ gameId: currentGame.id })}
             />
           ) : activeTab === 'browse' ? (
-            <BrowseOnlineView key={currentGame.id} gameId={currentGame.id} />
+            <BrowseOnlineView
+              key={currentGame.id}
+              gameId={currentGame.id}
+              onInstalled={() => library.refreshMods(currentGame.id, false)}
+            />
+          ) : activeTab === 'optimization' ? (
+            <OptimizationView
+              key={currentGame.id}
+              game={currentGame}
+              onSaveConfig={settings.saveConfig}
+              onLibraryChanged={() => library.refreshMods(currentGame.id, false)}
+            />
           ) : (
             <div className="workspace-scroll">
               <SettingsModal
@@ -143,16 +170,8 @@ export function App() {
       {selectedMod && (
         <ModDetailsModal
           key={currentGame.id + ':' + selectedMod.id}
-          gameId={currentGame.id}
           mod={selectedMod}
           onClose={() => setSelectedModId(null)}
-          onOpenFolder={library.openFolder}
-          onToggle={library.toggleMod}
-          onDetailsSaved={() => library.refreshMods(currentGame.id, false)}
-          onUpdate={(mod) => {
-            setSelectedModId(null);
-            setInstall({ gameId: currentGame.id, replacement: mod });
-          }}
         />
       )}
 

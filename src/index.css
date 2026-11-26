@@ -9,13 +9,13 @@
 }
 
 @theme {
-  --color-workspace: #111217;
-  --color-chrome: #0e0f13;
-  --color-panel: #191b21;
-  --color-field: #13151a;
-  --color-line: #30323a;
-  --color-muted: #aeb2bf;
-  --color-accent: #e7ba70;
+  --color-workspace: #0e0e10;
+  --color-chrome: #09090b;
+  --color-panel: #151518;
+  --color-field: #101013;
+  --color-line: #27272c;
+  --color-muted: #a1a1aa;
+  --color-accent: #d4d4d8;
 }
 
 @layer base {
@@ -44,12 +44,12 @@
     background: var(--color-workspace);
   }
   ::-webkit-scrollbar-thumb {
-    background: #424651;
+    background: #35353c;
     border: 2px solid var(--color-workspace);
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #585e6c;
+    background: #4b4b55;
   }
 
   :where(button, a, input, select):focus-visible {
@@ -94,11 +94,11 @@
   }
 
   .ui-button {
-    @apply inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-line bg-panel px-3 text-sm font-medium text-white shadow-xs transition-colors hover:border-[#4b4f5c] hover:bg-white/[0.07] active:bg-white/[0.04] disabled:opacity-45 aria-disabled:opacity-45;
+    @apply inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-line bg-panel px-3 text-sm font-medium text-white shadow-xs transition-colors hover:border-[#3f3f46] hover:bg-white/[0.07] active:bg-white/[0.04] disabled:opacity-45 aria-disabled:opacity-45;
   }
 
   .ui-button--primary {
-    @apply border-accent bg-accent font-semibold text-[#18120a] hover:border-[#f3cc8c] hover:bg-[#f3cc8c] active:bg-[#d9ab60];
+    @apply border-[#52525b] bg-[#26262c] font-semibold text-white hover:border-[#71717a] hover:bg-[#303038] active:bg-[#1e1e24];
   }
 
   .ui-button--icon {
@@ -135,7 +135,7 @@
 }
 
 .atelier-card:hover {
-  border-color: #55504a;
+  border-color: #46464f;
 }
 
 .glow-gold {

@@ -10,7 +10,7 @@ interface InstallModalProps {
   onDone: (gameId: GameId) => void;
 }
 
-const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300';
+const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]';
 
 export function InstallModal({ games, initialGameId, replacement, onClose, onDone }: InstallModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -136,15 +136,15 @@ export function InstallModal({ games, initialGameId, replacement, onClose, onDon
         onDragOver={(event) => { event.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={dropZip}
-        className={`flex flex-col items-center gap-3 rounded-xl border-2 border-dashed p-6 ${isDragging ? 'border-amber-400 bg-amber-500/10' : 'border-white/20 bg-[#0e1017]'}`}
+        className={`flex flex-col items-center gap-3 rounded-md border-2 border-dashed p-6 ${isDragging ? 'border-accent bg-white/[0.05]' : 'border-line bg-field'}`}
       >
-        <UploadCloud size={24} className="text-amber-300" aria-hidden="true" />
+        <UploadCloud size={24} className="text-accent" aria-hidden="true" />
         <p className="text-sm text-stone-300">Choose a ZIP file or drop it here.</p>
         <button
           type="button"
           aria-disabled={installing}
           onClick={chooseZip}
-          className={`rounded-lg border border-white/15 bg-[#202535] px-3 py-2 text-sm font-semibold text-amber-300 hover:bg-[#292e40] aria-disabled:opacity-50 ${focusRing}`}
+          className={`ui-button ui-button--primary ${focusRing}`}
         >
           Choose ZIP
         </button>
