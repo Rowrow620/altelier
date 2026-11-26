@@ -1,0 +1,32 @@
+{
+  "data": {
+    "mods": {
+      "totalCount": 173,
+      "facetsData": {
+        "categoryName": {
+          "Boss Fights": 60,
+          "Gameplay": 43,
+          "Miscellaneous": 38,
+          "Utilities": 18,
+          "Skins": 11,
+          "User Interface": 3
+        }
+      },
+      "nodes": [
+        {
+          "modId": 234,
+          "name": "Library of Ruina Optimization mod",
+          "author": "SionGamesEz",
+          "version": "1",
+          "summary": "Mod de optimización para Library of Ruina",
+          "category": "Utilities",
+          "adultContent": false,
+          "downloads": 97,
+          "endorsements": 0,
+          "thumbnailLargeUrl": "https://images.nexusmods.com/mod-images/3356/t/large/2/234/234-1791346946-1240843816.jpg",
+          "thumbnailUrl": "https://staticdelivery.nexusmods.com/mods/3356/images/thumbnails/234/234-1791346946-1240843816.jpg"
+        }
+      ]
+    }
+  }
+}

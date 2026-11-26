@@ -1,0 +1,89 @@
+{
+  "name": "atelier-mod-manager",
+  "version": "1.0.0",
+  "description": "Desktop mod manager for Lobotomy Corporation and Library of Ruina",
+  "main": "electron/main.js",
+  "type": "commonjs",
+  "packageManager": "pnpm@11.5.3",
+  "homepage": "https://github.com/Rowrow620/altelier#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Rowrow620/altelier.git"
+  },
+  "scripts": {
+    "dev:vite": "vite",
+    "dev:electron": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .",
+    "dev": "concurrently -k -s first \"pnpm run dev:vite\" \"pnpm run dev:electron\"",
+    "build": "vite build",
+    "test": "node --test",
+    "check": "tsc --noEmit && pnpm test && pnpm build",
+    "package:dir": "pnpm build && electron-builder --win --dir",
+    "package:win": "pnpm build && electron-builder --win",
+    "start": "electron .",
+    "debug": "electron . --atelier-debug"
+  },
+  "keywords": [
+    "lobotomy-corporation",
+    "library-of-ruina",
+    "project-moon",
+    "mod-manager",
+    "atelier"
+  ],
+  "author": "Juan F. Sanchez Jr.",
+  "license": "MIT",
+  "build": {
+    "appId": "com.rowrow620.atelier",
+    "productName": "Atelier Mod Manager",
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "shared/**/*",
+      "src/assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "dependencies": {
+    "adm-zip": "0.6.1",
+    "clsx": "2.1.1",
+    "lucide-react": "1.71.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "tailwind-merge": "3.7.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.5",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "concurrently": "10.0.7",
+    "cross-env": "^10.1.0",
+    "electron": "45.2.3",
+    "electron-builder": "^26.18.0",
+    "tailwindcss": "4.3.5",
+    "typescript": "7.0.2",
+    "vite": "8.3.7",
+    "wait-on": "9.5.1"
+  }
+}

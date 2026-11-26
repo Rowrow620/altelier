@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+@theme {
+  --color-workspace: #111217;
+  --color-chrome: #0e0f13;
+  --color-panel: #191b21;
+  --color-field: #13151a;
+  --color-line: #30323a;
+  --color-muted: #aeb2bf;
+  --color-accent: #e7ba70;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    color-scheme: dark;
+    background-color: var(--color-workspace);
+    color: #eff0f4;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-workspace);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #424651;
+    border: 2px solid var(--color-workspace);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #585e6c;
+  }
+
+  :where(button, a, input, select):focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  :where(button):not(:disabled, [aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
+.font-cinzel {
+  font-family: 'Cinzel', serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+@layer components {
+  .workspace-scroll {
+    @apply min-h-0 min-w-0 flex-1 overflow-y-auto;
+    scrollbar-gutter: stable;
+  }
+
+  .workspace-content {
+    padding: clamp(20px, 2.2vw, 36px);
+  }
+
+  .page-header {
+    @apply mb-5 flex flex-wrap items-center justify-between gap-4;
+  }
+
+  .page-title {
+    font-family: 'Cinzel', Georgia, serif;
+    @apply text-[26px] leading-tight font-bold text-white;
+  }
+
+  .ui-button {
+    @apply inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-line bg-panel px-3 text-sm font-medium text-white transition-colors hover:bg-white/10 disabled:opacity-45 aria-disabled:opacity-45;
+  }
+
+  .ui-button--primary {
+    @apply border-accent bg-accent text-[#18120a] hover:border-[#f3cc8c] hover:bg-[#f3cc8c];
+  }
+
+  .ui-button--icon {
+    @apply w-9 px-0;
+  }
+
+  .ui-field {
+    @apply h-9 min-w-0 rounded-md border border-line bg-field px-3 text-sm text-white hover:border-[#515460];
+  }
+
+  .mod-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 264px), 1fr));
+  }
+
+  .catalog-toolbar {
+    container-type: inline-size;
+  }
+
+  .catalog-controls {
+    @apply flex flex-col gap-3;
+  }
+
+  @container (min-width: 900px) {
+    .catalog-controls {
+      @apply flex-row items-end;
+    }
+  }
+}
+
+.atelier-card {
+  background: var(--color-panel);
+  border: 1px solid var(--color-line);
+}
+
+.atelier-card:hover {
+  border-color: #55504a;
+}
+
+.glow-gold {
+  box-shadow: 0 0 15px rgba(229, 185, 88, 0.35);
+}
+
+.glow-gold-lg {
+  box-shadow: 0 0 25px rgba(229, 185, 88, 0.45);
+}

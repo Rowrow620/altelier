@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<job id="Atelier">
+  <script language="JScript"><![CDATA[
+    var files = new ActiveXObject("Scripting.FileSystemObject");
+    var shell = new ActiveXObject("WScript.Shell");
+    var project = files.GetParentFolderName(WScript.ScriptFullName);
+    var electron = files.BuildPath(project, "node_modules\\electron\\dist\\electron.exe");
+
+    if (!files.FileExists(electron) || !files.FileExists(files.BuildPath(project, "dist\\index.html"))) {
+      shell.Popup("Run pnpm install and pnpm build, then open Launch Atelier again.", 0, "Atelier Mod Manager", 16);
+      WScript.Quit(1);
+    }
+
+    shell.CurrentDirectory = project;
+    shell.Run('"' + electron + '" "."', 1, false);
+  ]]></script>
+</job>

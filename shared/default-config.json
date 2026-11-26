@@ -1,0 +1,35 @@
+{
+  "activeGame": "lobotomy",
+  "activeProfile": "Default",
+  "profiles": ["Default", "Vanilla+", "Custom Run"],
+  "games": {
+    "lobotomy": {
+      "id": "lobotomy",
+      "name": "Lobotomy Corporation",
+      "appId": "568220",
+      "exeName": "LobotomyCorp.exe",
+      "nexusDomain": "lobotomycorporation",
+      "nexusGameId": 2861,
+      "steamFolders": ["LobotomyCorp", "Lobotomy Corporation"],
+      "gamePath": "",
+      "modsPath": "",
+      "fallbackModsPath": "",
+      "baseModInstalled": false,
+      "enabledModIds": []
+    },
+    "ruina": {
+      "id": "ruina",
+      "name": "Library of Ruina",
+      "appId": "1256670",
+      "exeName": "LibraryOfRuina.exe",
+      "nexusDomain": "libraryofruina",
+      "nexusGameId": 3356,
+      "steamFolders": ["Library Of Ruina", "LibraryOfRuina"],
+      "gamePath": "",
+      "modsPath": "",
+      "fallbackModsPath": "",
+      "baseModInstalled": false,
+      "enabledModIds": []
+    }
+  }
+}
