@@ -30,7 +30,7 @@
     "atelier"
   ],
   "author": "Juan F. Sanchez Jr.",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "build": {
     "appId": "com.rowrow620.atelier",
     "productName": "Atelier Mod Manager",
