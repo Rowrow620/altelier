@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Norwester';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/norwester.woff') format('woff');
+}
+
 @theme {
   --color-workspace: #111217;
   --color-chrome: #0e0f13;
@@ -58,6 +66,10 @@
   font-family: 'Cinzel', serif;
 }
 
+.font-norwester {
+  font-family: 'Norwester', 'Inter', sans-serif;
+}
+
 .font-mono {
   font-family: 'JetBrains Mono', monospace;
 }
@@ -82,11 +94,11 @@
   }
 
   .ui-button {
-    @apply inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-line bg-panel px-3 text-sm font-medium text-white transition-colors hover:bg-white/10 disabled:opacity-45 aria-disabled:opacity-45;
+    @apply inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-line bg-panel px-3 text-sm font-medium text-white shadow-xs transition-colors hover:border-[#4b4f5c] hover:bg-white/[0.07] active:bg-white/[0.04] disabled:opacity-45 aria-disabled:opacity-45;
   }
 
   .ui-button--primary {
-    @apply border-accent bg-accent text-[#18120a] hover:border-[#f3cc8c] hover:bg-[#f3cc8c];
+    @apply border-accent bg-accent font-semibold text-[#18120a] hover:border-[#f3cc8c] hover:bg-[#f3cc8c] active:bg-[#d9ab60];
   }
 
   .ui-button--icon {

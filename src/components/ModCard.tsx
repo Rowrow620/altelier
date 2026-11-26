@@ -10,7 +10,7 @@ interface ModCardProps {
   onViewDetails: (mod: Mod) => void;
 }
 
-const iconButton = 'grid size-8 place-items-center rounded-md text-muted hover:bg-white/10 hover:text-white';
+const iconButton = 'grid size-8 place-items-center rounded-md border border-transparent text-muted transition-colors hover:border-line hover:bg-white/10 hover:text-white';
 
 export function ModCard({ mod, update, onToggle, onOpenFolder, onDelete, onViewDetails }: ModCardProps) {
   const reference = mod.source === 'workshop' ? mod.id : mod.folderName;

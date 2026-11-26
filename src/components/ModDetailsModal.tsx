@@ -159,11 +159,7 @@ export const ModDetailsModal: React.FC<ModDetailsModalProps> = ({
                 <button
                   type="button"
                   onClick={() => onToggle(mod.id, mod.enabled)}
-                  className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-colors ${
-                    mod.enabled
-                      ? 'ui-button'
-                      : 'bg-amber-500 text-black shadow-md hover:bg-amber-400'
-                  }`}
+                  className={mod.enabled ? 'ui-button text-xs' : 'ui-button ui-button--primary text-xs'}
                 >
                   {mod.enabled ? 'Disable' : 'Enable'}
                 </button>
