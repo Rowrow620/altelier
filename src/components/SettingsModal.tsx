@@ -18,6 +18,7 @@ type DraftPaths = Partial<Record<GameId, Partial<Record<PathField, string>>>>;
 
 export function SettingsModal({ config, onSaveConfig, onDetectGames }: SettingsModalProps) {
   const [draftPaths, setDraftPaths] = useState<DraftPaths>({});
+  const [draftApiKey, setDraftApiKey] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
 
@@ -56,8 +57,12 @@ export function SettingsModal({ config, onSaveConfig, onDetectGames }: SettingsM
     setBusy(true);
     setStatus('');
     try {
-      await onSaveConfig({ games: draftPaths });
+      await onSaveConfig({
+        ...(draftApiKey !== undefined ? { nexusApiKey: draftApiKey } : {}),
+        games: draftPaths,
+      });
       setDraftPaths({});
+      setDraftApiKey(undefined);
       setStatus('Settings saved.');
     } catch (cause) {
       setStatus(errorMessage(cause, 'Could not save settings.'));
@@ -111,6 +116,27 @@ export function SettingsModal({ config, onSaveConfig, onDetectGames }: SettingsM
             </section>
           );
         })}
+        <section aria-labelledby="nexus-settings" className="space-y-3 rounded-md border border-line bg-panel p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 id="nexus-settings" className="font-semibold text-white">Nexus Mods</h3>
+            <span className="text-xs text-muted">Optional for direct in-app downloads (Premium)</span>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="nexus-api-key" className="text-xs font-medium text-muted">Personal API key</label>
+            <input
+              id="nexus-api-key"
+              type="password"
+              value={draftApiKey ?? config.nexusApiKey ?? ''}
+              onChange={(event) => {
+                setDraftApiKey(event.target.value);
+                setStatus('');
+              }}
+              placeholder="Paste your Nexus Mods personal API key"
+              disabled={busy}
+              className="ui-field w-full select-text"
+            />
+          </div>
+        </section>
       </div>
       <div className="mt-4 flex min-h-9 items-center justify-between gap-3">
         <p role="status" className="text-sm text-muted">{status}</p>

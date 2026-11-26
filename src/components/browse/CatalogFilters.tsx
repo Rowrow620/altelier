@@ -1,21 +1,19 @@
-import { RotateCw, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import type { CatalogFilters as FilterValues } from '../../types';
 
 interface CatalogFiltersProps {
   search: string;
   filters: FilterValues;
   categories: string[];
-  loading: boolean;
   canReset: boolean;
   onSearchChange: (query: string) => void;
   onSearch: () => void;
   onFilterChange: (change: Partial<FilterValues>) => void;
-  onRefresh: () => void;
   onReset: () => void;
 }
 
 export function CatalogFilters({
-  search, filters, categories, loading, canReset, onSearchChange, onSearch, onFilterChange, onRefresh, onReset,
+  search, filters, categories, canReset, onSearchChange, onSearch, onFilterChange, onReset,
 }: CatalogFiltersProps) {
   const categoryOptions = filters.category && !categories.includes(filters.category)
     ? [filters.category, ...categories]
@@ -44,16 +42,6 @@ export function CatalogFilters({
             />
           </label>
           <button type="submit" className="ui-button ui-button--primary">Search</button>
-          <button
-            type="button"
-            title="Refresh results"
-            aria-label="Refresh results"
-            aria-disabled={loading}
-            className="ui-button ui-button--icon"
-            onClick={() => { if (!loading) onRefresh(); }}
-          >
-            <RotateCw size={16} aria-hidden="true" />
-          </button>
           {canReset && (
             <button
               type="button"

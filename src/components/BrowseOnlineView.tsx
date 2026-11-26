@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import type { CatalogFilters as FilterValues, CatalogResults, CatalogSearch, GameId } from '../types';
+import type { CatalogFilters as FilterValues, CatalogMod, CatalogResults, CatalogSearch, GameId } from '../types';
 import { CatalogCard } from './browse/CatalogCard';
+import { CatalogDetailsModal } from './browse/CatalogDetailsModal';
 import { CatalogFilters } from './browse/CatalogFilters';
 
 type BrowseRequest = Omit<CatalogSearch, 'gameId'>;
@@ -18,11 +19,12 @@ const DEFAULT_SEARCH: BrowseRequest = {
   sort: 'downloads',
 };
 
-export function BrowseOnlineView({ gameId }: { gameId: GameId }) {
+export function BrowseOnlineView({ gameId, onInstalled }: { gameId: GameId; onInstalled: () => void }) {
   const [search, setSearch] = useState('');
   const [request, setRequest] = useState(DEFAULT_SEARCH);
   const [categories, setCategories] = useState<string[]>([]);
   const [state, setState] = useState<SearchState>({ status: 'loading' });
+  const [selectedMod, setSelectedMod] = useState<CatalogMod | null>(null);
 
   useEffect(() => {
     const api = window.atelierApi;
@@ -79,12 +81,10 @@ export function BrowseOnlineView({ gameId }: { gameId: GameId }) {
           search={search}
           filters={request}
           categories={categories}
-          loading={loading}
           canReset={canReset}
           onSearchChange={setSearch}
           onSearch={applyFilters}
           onFilterChange={applyFilters}
-          onRefresh={() => load(request, true)}
           onReset={resetSearch}
         />
 
@@ -133,9 +133,27 @@ export function BrowseOnlineView({ gameId }: { gameId: GameId }) {
               </div>
             </div>
           ))}
-          {results?.mods.map((mod, index) => <CatalogCard key={mod.id} mod={mod} eager={index < 5} />)}
+          {results?.mods.map((mod, index) => (
+            <CatalogCard
+              key={mod.id}
+              mod={mod}
+              gameId={gameId}
+              eager={index < 5}
+              onSelect={setSelectedMod}
+              onInstalled={onInstalled}
+            />
+          ))}
         </div>
       </div>
+      {selectedMod && (
+        <CatalogDetailsModal
+          key={selectedMod.id}
+          gameId={gameId}
+          mod={selectedMod}
+          onClose={() => setSelectedMod(null)}
+          onInstalled={onInstalled}
+        />
+      )}
     </section>
   );
 }
