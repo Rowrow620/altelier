@@ -2,8 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   AlertTriangle,
   Archive,
-  ArrowDown,
-  ArrowUp,
   CheckCircle2,
   ExternalLink,
   FileText,
@@ -15,6 +13,11 @@ import {
 } from 'lucide-react';
 import { errorMessage } from '../errors';
 import type { ConfigPatch, GameConfig, GameDiagnostics, GameLogState, LoadOrderState, SaveBackupsState } from '../types';
+import { BackupsPanel } from './optimization/BackupsPanel';
+import { DiagnosticsPanel } from './optimization/DiagnosticsPanel';
+import { LaunchOptionsPanel } from './optimization/LaunchOptionsPanel';
+import { LoadOrderPanel } from './optimization/LoadOrderPanel';
+import { LogsPanel } from './optimization/LogsPanel';
 
 interface OptimizationViewProps {
   game: GameConfig;
@@ -23,11 +26,6 @@ interface OptimizationViewProps {
 }
 
 type OptimizationTab = 'diagnostics' | 'load-order' | 'backups' | 'logs' | 'launch';
-
-const UNITY_FLAGS = [
-  { flag: '-popupwindow', label: 'Borderless window (-popupwindow)', description: 'Runs the game in a borderless window when windowed mode is selected.' },
-  { flag: '-nolog', label: 'Disable Unity log (-nolog)', description: 'Skips writing Player.log during gameplay to reduce disk writes.' },
-] as const;
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -216,7 +214,6 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
         {error && <p role="alert" className="rounded-md border border-rose-500/30 bg-panel px-4 py-3 text-sm text-rose-200">{error}</p>}
         {notice && <p role="status" className="rounded-md border border-line bg-panel px-4 py-2.5 text-sm text-stone-200">{notice}</p>}
 
-        {/* Unified Overview Strip */}
         <section aria-label="Setup overview" className="overflow-hidden rounded-md border border-line bg-panel">
           {loading || !data ? (
             <p className="px-4 py-3.5 text-sm text-muted">Scanning game setup…</p>
@@ -338,7 +335,6 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
           )}
         </section>
 
-        {/* Sub-Navigation Tabs */}
         <div role="tablist" aria-label="Optimization sections" className="flex flex-wrap items-center gap-1 border-b border-line">
           {tabs.map(({ id, label, Icon, badge }) => {
             const active = subTab === id;
@@ -373,299 +369,46 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
           })}
         </div>
 
-        {/* Sub-Tab Content */}
         {subTab === 'diagnostics' && (
-          <div id="opt-panel-diagnostics" role="tabpanel" aria-labelledby="opt-tab-diagnostics" className="space-y-6">
-            <section className="space-y-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-white">Mod Compatibility Checks</h3>
-                {data && (
-                  <span className="text-xs text-muted">
-                    {data.compatibility.length} {data.compatibility.length === 1 ? 'item' : 'items'}
-                  </span>
-                )}
-              </div>
-              {loading || !data ? (
-                <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm text-muted">Scanning mods for structure issues…</div>
-              ) : data.compatibility.length === 0 ? (
-                <div className="flex items-center gap-2 rounded-md border border-line bg-panel px-4 py-3 text-sm text-emerald-300">
-                  <CheckCircle2 size={16} aria-hidden="true" />
-                  <span>All installed local mods pass folder and compatibility scans.</span>
-                </div>
-              ) : (
-                <div className="divide-y divide-line overflow-hidden rounded-md border border-line bg-panel">
-                  {data.compatibility.map((item) => (
-                    <div key={item.id} className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-white/[0.02]">
-                      <div className="min-w-0 flex-1 space-y-0.5">
-                        <div className="text-sm font-medium text-white">{item.modName}</div>
-                        <div className="text-xs text-muted">{item.message}</div>
-                      </div>
-                      {item.fixable && (
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => void fixCompatibility(item.id)}
-                          className="ui-button ui-button--primary h-8 min-h-8 text-xs"
-                        >
-                          {item.fixLabel || 'Fix'}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="space-y-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-white">Enabled Mod File Conflicts</h3>
-                {data && (
-                  <span className="text-xs text-muted">
-                    {data.conflicts.length} overlapping {data.conflicts.length === 1 ? 'file' : 'files'}
-                  </span>
-                )}
-              </div>
-              {loading || !data ? (
-                <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm text-muted">Checking enabled mods…</div>
-              ) : data.conflicts.length === 0 ? (
-                <div className="flex items-center gap-2 rounded-md border border-line bg-panel px-4 py-3 text-sm text-emerald-300">
-                  <CheckCircle2 size={16} aria-hidden="true" />
-                  <span>No overlapping files across enabled local mods.</span>
-                </div>
-              ) : (
-                <div className="overflow-hidden rounded-md border border-line bg-panel">
-                  <div className="hidden grid-cols-[minmax(220px,1fr)_minmax(240px,1.5fr)] gap-4 border-b border-line bg-chrome px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted md:grid">
-                    <span>Overlapping File</span>
-                    <span>Shared By Enabled Mods</span>
-                  </div>
-                  <div className="divide-y divide-line">
-                    {data.conflicts.map((conflict) => (
-                      <div
-                        key={conflict.path}
-                        className="flex flex-col gap-1 px-4 py-2.5 text-xs transition-colors hover:bg-white/[0.02] md:grid md:grid-cols-[minmax(220px,1fr)_minmax(240px,1.5fr)] md:items-center md:gap-4"
-                      >
-                        <div className="truncate font-mono text-stone-200" title={conflict.path}>{conflict.path}</div>
-                        <div className="text-muted">{conflict.mods.join(', ')}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </section>
-          </div>
+          <DiagnosticsPanel
+            data={data}
+            loading={loading}
+            busy={busy}
+            onFixCompatibility={(id) => void fixCompatibility(id)}
+          />
         )}
-
         {subTab === 'load-order' && (
-          <div id="opt-panel-load-order" role="tabpanel" aria-labelledby="opt-tab-load-order" className="space-y-4">
-            <div className="rounded-md border border-line bg-panel px-4 py-3 text-xs text-muted">
-              Mods load from top to bottom. Later entries override earlier patches when modifying the same methods.
-            </div>
-            {!loadOrderState ? (
-              <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm text-muted">Reading load order…</div>
-            ) : !loadOrderState.available || loadOrderState.orders.length === 0 ? (
-              <div className="rounded-md border border-line bg-panel px-4 py-3 text-xs text-muted">
-                {game.id === 'ruina'
-                  ? 'No load order saved yet. Launch Library of Ruina with -mod once to initialize ModSetting.save.'
-                  : 'No BaseModList_v2.xml load order entries found yet.'}
-              </div>
-            ) : (
-              <div className="divide-y divide-line overflow-hidden rounded-md border border-line bg-panel">
-                {loadOrderState.orders.map((modId, index) => (
-                  <div key={modId} className="flex items-center justify-between gap-4 px-4 py-2.5 text-xs transition-colors hover:bg-white/[0.02]">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="w-6 shrink-0 font-mono text-muted tabular-nums">{index + 1}.</span>
-                      <span className="truncate font-mono text-stone-200">{modId}</span>
-                      {loadOrderState.activeIds.includes(modId) && (
-                        <span className="rounded border border-emerald-500/40 bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] text-emerald-300">
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <button
-                        type="button"
-                        aria-label={`Move ${modId} up`}
-                        disabled={busy || index === 0}
-                        onClick={() => void moveLoadOrder(index, -1)}
-                        className="ui-button h-7 min-h-7 px-2 text-xs disabled:opacity-35"
-                      >
-                        <ArrowUp size={13} aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Move ${modId} down`}
-                        disabled={busy || index === loadOrderState.orders.length - 1}
-                        onClick={() => void moveLoadOrder(index, 1)}
-                        className="ui-button h-7 min-h-7 px-2 text-xs disabled:opacity-35"
-                      >
-                        <ArrowDown size={13} aria-hidden="true" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <LoadOrderPanel
+            gameId={game.id}
+            loadOrderState={loadOrderState}
+            busy={busy}
+            onMove={(index, delta) => void moveLoadOrder(index, delta)}
+          />
         )}
-
         {subTab === 'backups' && (
-          <div id="opt-panel-backups" role="tabpanel" aria-labelledby="opt-tab-backups" className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-line bg-panel px-4 py-3.5">
-              <div className="min-w-0 flex-1 space-y-0.5">
-                <div className="text-sm font-semibold text-white">Unity Save Folder</div>
-                <div className="truncate font-mono text-xs text-muted" title={backupsState?.savePath || ''}>
-                  {backupsState?.savePath || 'Checking save path…'}
-                </div>
-              </div>
-              <button
-                type="button"
-                disabled={busy || !backupsState?.saveExists}
-                onClick={() => void createBackup()}
-                className="ui-button ui-button--primary text-xs"
-              >
-                Back up saves now
-              </button>
-            </div>
-
-            {!backupsState ? (
-              <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm text-muted">Checking save folder…</div>
-            ) : !backupsState.saveExists && backupsState.backups.length === 0 ? (
-              <div className="rounded-md border border-line bg-panel px-4 py-3 text-xs text-muted">
-                No Unity save folder found at this location yet.
-              </div>
-            ) : backupsState.backups.length === 0 ? (
-              <div className="rounded-md border border-line bg-panel px-4 py-3 text-xs text-muted">
-                No backups created yet. Back up saves before testing heavy mods.
-              </div>
-            ) : (
-              <div className="divide-y divide-line overflow-hidden rounded-md border border-line bg-panel">
-                {backupsState.backups.map((backup) => (
-                  <div key={backup.id} className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 text-xs transition-colors hover:bg-white/[0.02]">
-                    <div className="space-y-0.5">
-                      <div className="text-sm font-medium text-white">
-                        {new Date(backup.createdAt).toLocaleString()}
-                        {backup.label ? ` · ${backup.label}` : ''}
-                      </div>
-                      <div className="text-muted tabular-nums">
-                        {backup.fileCount} files · {formatBytes(backup.totalBytes)}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void restoreBackup(backup.id)}
-                      className="ui-button h-8 min-h-8 text-xs"
-                    >
-                      Restore
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <BackupsPanel
+            backupsState={backupsState}
+            busy={busy}
+            formatBytes={formatBytes}
+            onCreateBackup={() => void createBackup()}
+            onRestoreBackup={(id) => void restoreBackup(id)}
+          />
         )}
-
-        {subTab === 'logs' && (() => {
-          const sources = logsState?.sources?.length ? logsState.sources : (logsState ? [{ id: 'player', label: 'Player.log', logPath: logsState.logPath, exists: logsState.exists, lines: logsState.lines, errorCount: logsState.errorCount }] : []);
-          const currentLog = sources.find((s) => s.id === selectedLogId) ?? sources[0] ?? null;
-          return (
-          <div id="opt-panel-logs" role="tabpanel" aria-labelledby="opt-tab-logs" className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-line bg-panel px-4 py-3">
-              <div className="min-w-0 flex-1 space-y-0.5">
-                <div className="text-sm font-semibold text-white">{currentLog?.label ?? 'Unity Player.log'}</div>
-                <div className="truncate font-mono text-xs text-muted" title={currentLog?.logPath || ''}>
-                  {currentLog?.logPath || 'Checking log path…'}
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                {sources.length > 1 && (
-                  <div className="flex items-center gap-1">
-                    {sources.map((src) => (
-                      <button
-                        key={src.id}
-                        type="button"
-                        onClick={() => setSelectedLogId(src.id)}
-                        className={`rounded border px-2 py-1 font-mono text-[11px] transition-colors ${
-                          currentLog?.id === src.id
-                            ? 'border-accent bg-accent/20 text-white'
-                            : 'border-line bg-field text-muted hover:text-white'
-                        }`}
-                      >
-                        {src.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <label className="flex cursor-pointer items-center gap-2 text-xs text-stone-200">
-                  <input
-                    type="checkbox"
-                    checked={errorsOnly}
-                    onChange={(e) => setErrorsOnly(e.target.checked)}
-                    className="size-3.5 accent-[var(--color-accent)]"
-                  />
-                  <span>Errors only ({currentLog?.errorCount ?? 0})</span>
-                </label>
-              </div>
-            </div>
-            {!currentLog ? (
-              <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm text-muted">Loading log tail…</div>
-            ) : !currentLog.exists ? (
-              <div className="rounded-md border border-line bg-panel px-4 py-3 text-xs text-muted">
-                No {currentLog.label} found yet. Launch the game once to generate logs.
-              </div>
-            ) : (() => {
-              const visibleLines = errorsOnly
-                ? currentLog.lines.filter((line) => /\b(error|fail)\b|exception/i.test(line))
-                : currentLog.lines;
-              return visibleLines.length === 0 ? (
-                <div className="rounded-md border border-line bg-panel px-4 py-3 text-xs text-emerald-300">
-                  No error or exception lines found in the recent log tail.
-                </div>
-              ) : (
-                <pre className="max-h-96 overflow-auto rounded-md border border-line bg-chrome p-4 font-mono text-[11px] leading-relaxed text-stone-300 select-text">
-                  {visibleLines.join('\n')}
-                </pre>
-              );
-            })()}
-          </div>
-          );
-        })()}
-
+        {subTab === 'logs' && (
+          <LogsPanel
+            logsState={logsState}
+            selectedLogId={selectedLogId}
+            errorsOnly={errorsOnly}
+            onSelectLog={setSelectedLogId}
+            onToggleErrorsOnly={setErrorsOnly}
+          />
+        )}
         {subTab === 'launch' && (
-          <div id="opt-panel-launch" role="tabpanel" aria-labelledby="opt-tab-launch" className="divide-y divide-line overflow-hidden rounded-md border border-line bg-panel">
-            {UNITY_FLAGS.map(({ flag, label, description }) => {
-              const checked = (game.launchArgs ?? []).includes(flag);
-              return (
-                <label
-                  key={flag}
-                  className="flex cursor-pointer items-center justify-between gap-4 px-4 py-3.5 transition-colors hover:bg-white/[0.02]"
-                >
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={busy}
-                      onChange={() => void toggleFlag(flag)}
-                      className="mt-0.5 size-4 accent-[var(--color-accent)]"
-                    />
-                    <div className="space-y-0.5">
-                      <div className="text-sm font-medium text-white">{label}</div>
-                      <div className="text-xs text-muted">{description}</div>
-                    </div>
-                  </div>
-                  <span
-                    className={`shrink-0 rounded border px-2 py-0.5 font-mono text-[11px] ${
-                      checked
-                        ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
-                        : 'border-line bg-field text-muted'
-                    }`}
-                  >
-                    {checked ? 'Enabled' : 'Off'}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
+          <LaunchOptionsPanel
+            launchArgs={game.launchArgs ?? []}
+            busy={busy}
+            onToggleFlag={(flag) => void toggleFlag(flag)}
+          />
         )}
       </div>
     </section>
