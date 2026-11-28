@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>AtelierLobotomyTweaks</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Optimize>true</Optimize>
+    <DebugType>none</DebugType>
+    <FrameworkPathOverride>C:\Windows\Microsoft.NET\Framework64\v4.0.30319</FrameworkPathOverride>
+    <LobotomyManagedDir Condition="'$(LobotomyManagedDir)' == ''">E:\Games\LobotomyCorp\LobotomyCorp_Data\Managed</LobotomyManagedDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(LobotomyManagedDir)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(LobotomyManagedDir)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(LobotomyManagedDir)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(LobotomyManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(LobotomyManagedDir)\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

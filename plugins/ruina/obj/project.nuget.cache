@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "8u3Tq3uopky92f/7ft/a8rphaPAalSrS2iiOQ87FOZz0x3YGwQQZVUdCdkA7icXrXpJ2+bIShbKGlzdIVxiEvw==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\aragi\\Desktop\\projects\\atelier\\plugins\\ruina\\AtelierTweaks.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\aragi\\.nuget\\packages\\lib.harmony\\2.2.2\\lib.harmony.2.2.2.nupkg.sha512"
+  ],
+  "logs": []
+}

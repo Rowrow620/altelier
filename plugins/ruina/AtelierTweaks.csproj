@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>AtelierTweaks</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Optimize>true</Optimize>
+    <DebugType>none</DebugType>
+    <FrameworkPathOverride>C:\Windows\Microsoft.NET\Framework64\v4.0.30319</FrameworkPathOverride>
+    <RuinaManagedDir Condition="'$(RuinaManagedDir)' == ''">E:\SteamLibrary\steamapps\common\Library Of Ruina\LibraryOfRuina_Data\Managed</RuinaManagedDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.2.2" ExcludeAssets="runtime" />
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(RuinaManagedDir)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(RuinaManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

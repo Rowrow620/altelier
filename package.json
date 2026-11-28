@@ -15,6 +15,7 @@
     "dev:electron": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .",
     "dev": "concurrently -k -s first \"pnpm run dev:vite\" \"pnpm run dev:electron\"",
     "build": "vite build",
+    "build:plugins": "dotnet build -c Release -o electron/tweaks/ruina/Assemblies plugins/ruina/AtelierTweaks.csproj && dotnet build -c Release -o electron/tweaks/lobotomy plugins/lobotomy/AtelierLobotomyTweaks.csproj",
     "test": "node --test",
     "check": "tsc --noEmit && pnpm test && pnpm build",
     "package:dir": "pnpm build && electron-builder --win --dir",
