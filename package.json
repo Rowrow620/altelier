@@ -1,6 +1,6 @@
 {
   "name": "atelier-mod-manager",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Desktop mod manager for Lobotomy Corporation and Library of Ruina",
   "main": "electron/main.js",
   "type": "commonjs",
