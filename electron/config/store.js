@@ -47,7 +47,7 @@ function normalizeTweaks(gameId, input, previous = DEFAULT_CONFIG.games[gameId].
     if (!Object.hasOwn(previous, key) || typeof value !== typeof previous[key] ||
       (typeof value === 'number' && !Number.isInteger(value)) ||
       (key === 'SpeedMultiplier' && ![0, 2, 4, 8].includes(value)) ||
-      (key === 'NoGrindAmount' && (value < 0 || value > 99)) ||
+      (key === 'NoGrindAmount' && (value < 0 || value > 99) && value !== 999) ||
       (key === 'KeyPageLimit' && ![5, 10, 25, 99].includes(value))) {
       throw new Error('Invalid gameplay tweak: ' + key + '.');
     }

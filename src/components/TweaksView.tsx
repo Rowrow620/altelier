@@ -102,6 +102,18 @@ const SPEED_OPTIONS = [
   { value: 8, label: '8x / 16x' },
 ] as const;
 
+const DROP_AMOUNT_OPTIONS = [
+  { value: 10, label: '10' },
+  { value: 99, label: '99' },
+  { value: 999, label: '999' },
+] as const;
+
+const KEY_PAGE_LIMIT_OPTIONS = [
+  { value: 10, label: '10' },
+  { value: 25, label: '25' },
+  { value: 99, label: '99' },
+] as const;
+
 export function TweaksView({ game, onSaveConfig }: TweaksViewProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -155,16 +167,70 @@ export function TweaksView({ game, onSaveConfig }: TweaksViewProps) {
 
         <div className="divide-y divide-line overflow-hidden rounded-md border border-line bg-panel">
           {game.id === 'ruina' ? (
-            RUINA_TOGGLES.map((item) => (
-              <ToggleRow
-                key={item.key}
-                label={item.label}
-                description={item.description}
-                checked={Boolean(tweaks[item.key])}
-                disabled={busy}
-                onChange={(next) => void updateTweak(item.key, next)}
-              />
-            ))
+            <>
+              {RUINA_TOGGLES.map((item) => (
+                <ToggleRow
+                  key={item.key}
+                  label={item.label}
+                  description={item.description}
+                  checked={Boolean(tweaks[item.key])}
+                  disabled={busy}
+                  onChange={(next) => void updateTweak(item.key, next)}
+                />
+              ))}
+              <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3.5">
+                <div className="space-y-0.5">
+                  <div className="text-sm font-medium text-white">No Grind Drop Amount</div>
+                  <div className="text-xs text-muted">Number of copies granted per book or burn drop when No Grind is enabled.</div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {DROP_AMOUNT_OPTIONS.map((opt) => {
+                    const selected = Number(tweaks.NoGrindAmount ?? 10) === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void updateTweak('NoGrindAmount', opt.value)}
+                        className={`rounded border px-2.5 py-1 text-xs font-medium transition-colors ${
+                          selected
+                            ? 'border-accent bg-accent/20 text-white'
+                            : 'border-line bg-field text-muted hover:text-white'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3.5">
+                <div className="space-y-0.5">
+                  <div className="text-sm font-medium text-white">Key Page Ownership Limit</div>
+                  <div className="text-xs text-muted">Maximum copies allowed for unlocked Key Page rarities.</div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {KEY_PAGE_LIMIT_OPTIONS.map((opt) => {
+                    const selected = Number(tweaks.KeyPageLimit ?? 10) === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void updateTweak('KeyPageLimit', opt.value)}
+                        className={`rounded border px-2.5 py-1 text-xs font-medium transition-colors ${
+                          selected
+                            ? 'border-accent bg-accent/20 text-white'
+                            : 'border-line bg-field text-muted hover:text-white'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
           ) : (
             <>
               {LOBOTOMY_TOGGLES.map((item) => (
