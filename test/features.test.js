@@ -330,3 +330,48 @@ test('diagnostics detects duplicate local copy of Workshop mod and removes it sa
   assert(!post.compatibility.some((c) => c.id === 'duplicate-local:2673646927'));
   assert.equal(fs.existsSync(path.join(ruinaDir, 'LibraryOfRuina_Data/Mods/2673646927')), false);
 });
+
+test('opt-in appUpdate validates release URLs and readGameLogs flags errors safely', async (t) => {
+  const { dir, write } = setup(t);
+  const { checkAppUpdate, compareSemver } = require('../electron/library/appUpdate');
+  const { readGameLogs } = require('../electron/library/logs');
+
+  assert.equal(compareSemver('1.1.0', '1.0.0') > 0, true);
+  assert.equal(compareSemver('1.0.0', '1.0.0'), 0);
+
+  await assert.rejects(
+    () => checkAppUpdate({
+      appVersion: '1.0.0',
+      fetcher: async () => new Response(JSON.stringify({
+        tag_name: 'v1.1.0',
+        html_url: 'https://evil.example/fake.exe',
+      }), { status: 200 }),
+    }),
+    /official repository/,
+  );
+
+  const valid = await checkAppUpdate({
+    appVersion: '1.0.0',
+    fetcher: async () => new Response(JSON.stringify({
+      tag_name: 'v1.2.0',
+      html_url: 'https://github.com/Rowrow620/altelier/releases/tag/v1.2.0',
+    }), { status: 200 }),
+  });
+  assert.equal(valid.updateAvailable, true);
+  assert.equal(valid.latestVersion, '1.2.0');
+
+  const localLow = path.join(dir, 'LocalLow');
+  write('LocalLow/Project Moon/LibraryOfRuina/Player.log', 'Initialize engine\nNullReferenceException: Object reference not set\nDone\n');
+  const logs = readGameLogs('ruina', { localLowRoot: localLow });
+  assert.equal(logs.exists, true);
+  assert.equal(logs.errorCount, 1);
+
+  for (const rel of [
+    'electron/tweaks/ruina/Assemblies/AtelierTweaks.dll',
+    'electron/tweaks/ruina/Assemblies/0Harmony.dll',
+    'electron/tweaks/lobotomy/AtelierLobotomyTweaks.dll',
+  ]) {
+    const bytes = fs.readFileSync(path.join(__dirname, '..', rel));
+    assert.equal(bytes.subarray(0, 2).toString('ascii'), 'MZ');
+  }
+});
