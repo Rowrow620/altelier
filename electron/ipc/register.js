@@ -93,7 +93,28 @@ function registerIpc({
     version: input?.version,
   }));
   handle('profiles:save', (input) => profiles.save(input?.name, input?.gameId));
-  handle('profiles:activate', (input) => profiles.activate(input?.name, input?.gameId));
+  handle('profiles:activate', async (input) => {
+    const preview = profiles.previewActivation?.(input?.name, input?.gameId);
+    if (preview && (preview.modChanges.length > 0 || preview.tweakChanges.length > 0)) {
+      const lines = [
+        ...preview.modChanges.slice(0, 12),
+        ...(preview.modChanges.length > 12 ? [`...and ${preview.modChanges.length - 12} more mod changes`] : []),
+        ...preview.tweakChanges,
+      ];
+      const decision = await dialog.showMessageBox(getWindow(), {
+        type: 'question',
+        title: 'Switch profile?',
+        message: `Switch to "${input?.name}"?`,
+        detail: lines.join('\n'),
+        buttons: ['Cancel', 'Switch'],
+        defaultId: 1,
+        cancelId: 0,
+        noLink: true,
+      });
+      if (decision.response !== 1) return store.read();
+    }
+    return profiles.activate(input?.name, input?.gameId);
+  });
   handle('profiles:delete', async (input) => {
     const decision = await dialog.showMessageBox(getWindow(), {
       type: 'warning', title: 'Delete profile?', message: `Delete profile "${input?.name}"?`,

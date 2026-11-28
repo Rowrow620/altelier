@@ -197,7 +197,34 @@ function createProfileService({ store, installer, journalPath }) {
     return activate(name, gameId) || nextConfig;
   }
 
-  return { activate, save, remove, exportData, importData, recover };
+  function previewActivation(input, requestedGame) {
+    recover();
+    const name = profileName(input);
+    const gameId = validateGameId(requestedGame);
+    const config = store.read();
+    if (config.activeGame !== gameId || !config.profiles.includes(name) || config.activeProfile === name) {
+      return { modChanges: [], tweakChanges: [] };
+    }
+    const { mods } = installer.profileState(gameId);
+    const target = config.profileSnapshots.find((entry) => entry.gameId === gameId && entry.name === name);
+    const outgoing = [...mods.values()].filter((mod) => mod.enabled).map((mod) => mod.name);
+    const enabled = new Set((target?.enabled ?? outgoing).map((value) => value.toLowerCase()));
+    const modChanges = [...mods.values()]
+      .filter((mod) => mod.enabled !== enabled.has(mod.name.toLowerCase()))
+      .map((mod) => `${enabled.has(mod.name.toLowerCase()) ? '+' : '-'} ${mod.name}`);
+    const tweakChanges = [];
+    if (target?.tweaks) {
+      const currentTweaks = config.games[gameId].tweaks ?? {};
+      for (const [key, nextVal] of Object.entries(target.tweaks)) {
+        if (currentTweaks[key] !== nextVal) {
+          tweakChanges.push(`${key}: ${currentTweaks[key]} -> ${nextVal}`);
+        }
+      }
+    }
+    return { modChanges, tweakChanges };
+  }
+
+  return { activate, previewActivation, save, remove, exportData, importData, recover };
 }
 
 module.exports = { createProfileService };
