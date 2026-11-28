@@ -55,11 +55,30 @@ async function checkAppUpdate({ fetcher = fetch, appVersion = currentVersion } =
       throw new Error('Release link did not match the official repository.');
     }
     const updateAvailable = compareSemver(latestVersion, appVersion) > 0;
+    let checksums = '';
+    const sumAsset = Array.isArray(data?.assets)
+      ? data.assets.find((asset) => String(asset?.name ?? '').toLowerCase() === 'sha256sums.txt')
+      : null;
+    const sumUrl = sanitizeReleaseUrl(sumAsset?.browser_download_url);
+    if (sumUrl) {
+      try {
+        const sumRes = await fetcher(sumUrl, {
+          headers: { 'User-Agent': `Atelier-Mod-Manager/${appVersion}` },
+          signal: controller.signal,
+        });
+        if (sumRes.ok) {
+          checksums = (await sumRes.text()).trim().slice(0, 4096);
+        }
+      } catch {
+        // Optional checksum file
+      }
+    }
     return {
       currentVersion: appVersion,
       latestVersion,
       updateAvailable,
       releaseUrl,
+      ...(checksums ? { checksums } : {}),
       checkedAt: new Date().toISOString(),
     };
   } finally {

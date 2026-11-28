@@ -332,7 +332,7 @@ test('diagnostics detects duplicate local copy of Workshop mod and removes it sa
 });
 
 test('opt-in appUpdate validates release URLs and readGameLogs flags errors safely', async (t) => {
-  const { dir, write } = setup(t);
+  const { dir, write, store } = setup(t);
   const { checkAppUpdate, compareSemver } = require('../electron/library/appUpdate');
   const { readGameLogs } = require('../electron/library/logs');
 
@@ -374,4 +374,22 @@ test('opt-in appUpdate validates release URLs and readGameLogs flags errors safe
     const bytes = fs.readFileSync(path.join(__dirname, '..', rel));
     assert.equal(bytes.subarray(0, 2).toString('ascii'), 'MZ');
   }
+
+  // BaseMod ZIP installer + Managed backup + NoGrindAmount preset validation
+  const AdmZip = require('adm-zip');
+  const { installBaseModArchive } = require('../electron/library/compatibility');
+  const lobDir = path.dirname(write('LobInstall/LobotomyCorp.exe'));
+  write('LobInstall/LobotomyCorp_Data/Managed/Assembly-CSharp.dll', 'vanilla-asm');
+  const baseModZip = path.join(dir, 'BaseMod.zip');
+  const bzip = new AdmZip();
+  bzip.addFile('BaseMod/LobotomyBaseModLib.dll', Buffer.from('MZmodlib'));
+  bzip.addFile('BaseMod/0Harmony.dll', Buffer.from('MZharmony'));
+  bzip.writeZip(baseModZip);
+  const installed = installBaseModArchive({ id: 'lobotomy', exeName: 'LobotomyCorp.exe', gamePath: lobDir }, baseModZip);
+  assert.equal(installed.extracted, 2);
+  assert(fs.existsSync(path.join(lobDir, 'LobotomyCorp_Data/Managed/LobotomyBaseModLib.dll')));
+  assert(fs.existsSync(path.join(installed.backupDir, 'Assembly-CSharp.dll')));
+
+  store.patch({ games: { ruina: { tweaks: { NoGrindAmount: 999, KeyPageLimit: 99 } } } });
+  assert.equal(store.read().games.ruina.tweaks.NoGrindAmount, 999);
 });

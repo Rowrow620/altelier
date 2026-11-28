@@ -214,11 +214,18 @@ export function SettingsModal({ config, onSaveConfig, onDetectGames }: SettingsM
           </div>
           {updateError && <p role="alert" className="text-xs text-rose-300">{updateError}</p>}
           {updateInfo && !updateError && (
-            <p role="status" className="text-xs text-muted">
-              {updateInfo.updateAvailable
-                ? `Update available: v${updateInfo.latestVersion} (current: v${updateInfo.currentVersion}).`
-                : `Up to date (v${updateInfo.currentVersion}).`}
-            </p>
+            <div className="space-y-2">
+              <p role="status" className="text-xs text-muted">
+                {updateInfo.updateAvailable
+                  ? `Update available: v${updateInfo.latestVersion} (current: v${updateInfo.currentVersion}).`
+                  : `Up to date (v${updateInfo.currentVersion}).`}
+              </p>
+              {updateInfo.checksums && (
+                <pre className="overflow-x-auto rounded border border-line bg-field p-2.5 font-mono text-[11px] text-stone-300 select-text">
+                  {updateInfo.checksums}
+                </pre>
+              )}
+            </div>
           )}
         </section>
       </div>
