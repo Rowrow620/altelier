@@ -1,17 +1,25 @@
-import React, { useEffect, useId, useRef } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import type { Mod } from '../types';
+import { errorMessage } from '../errors';
+import type { GameId, Mod } from '../types';
 
 interface ModDetailsModalProps {
+  gameId: GameId;
   mod: Mod | null;
   onClose: () => void;
+  onSaved?: () => void;
 }
 
-export const ModDetailsModal: React.FC<ModDetailsModalProps> = ({ mod, onClose }) => {
+export const ModDetailsModal: React.FC<ModDetailsModalProps> = ({ gameId, mod, onClose, onSaved }) => {
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const modId = mod?.id;
+  const [nexusUrl, setNexusUrl] = useState(mod?.nexusUrl ?? '');
+  const [version, setVersion] = useState(mod?.version ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [savedNotice, setSavedNotice] = useState('');
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -69,7 +77,7 @@ export const ModDetailsModal: React.FC<ModDetailsModalProps> = ({ mod, onClose }
           </button>
         </div>
 
-        <div className="overflow-y-auto p-6 text-sm">
+        <div className="space-y-5 overflow-y-auto p-6 text-sm">
           <div className="space-y-2">
             <div className="font-mono text-xs font-semibold uppercase tracking-wider text-muted">
               Summary
@@ -78,9 +86,66 @@ export const ModDetailsModal: React.FC<ModDetailsModalProps> = ({ mod, onClose }
               {mod.fullDescription || mod.description || 'No summary provided.'}
             </div>
           </div>
+
+          {mod.source !== 'workshop' && (
+            <div className="space-y-3 border-t border-line pt-4">
+              <div className="font-mono text-xs font-semibold uppercase tracking-wider text-muted">
+                Update Tracking
+              </div>
+              {error && <p role="alert" className="text-xs text-rose-300">{error}</p>}
+              {savedNotice && <p role="status" className="text-xs text-emerald-300">{savedNotice}</p>}
+              <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
+                <label className="space-y-1">
+                  <span className="block text-xs text-muted">Nexus Mods URL</span>
+                  <input
+                    type="url"
+                    value={nexusUrl}
+                    onChange={(e) => { setNexusUrl(e.target.value); setSavedNotice(''); }}
+                    placeholder="https://www.nexusmods.com/.../mods/123"
+                    className="w-full rounded border border-line bg-field px-3 py-1.5 text-xs text-white placeholder:text-muted/60 focus:border-accent focus:outline-none"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="block text-xs text-muted">Installed Version</span>
+                  <input
+                    type="text"
+                    value={version}
+                    onChange={(e) => { setVersion(e.target.value); setSavedNotice(''); }}
+                    placeholder="1.0.0"
+                    className="w-full rounded border border-line bg-field px-3 py-1.5 font-mono text-xs text-white placeholder:text-muted/60 focus:border-accent focus:outline-none"
+                  />
+                </label>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center justify-end border-t border-line bg-chrome p-4">
+        <div className="flex items-center justify-end gap-2 border-t border-line bg-chrome p-4">
+          {mod.source !== 'workshop' && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={async () => {
+                const api = window.atelierApi;
+                if (!api || saving) return;
+                setSaving(true);
+                setError('');
+                setSavedNotice('');
+                try {
+                  await api.saveModDetails(gameId, mod.folderName, { nexusUrl: nexusUrl.trim(), version: version.trim() });
+                  setSavedNotice('Saved update tracking details.');
+                  onSaved?.();
+                } catch (cause) {
+                  setError(errorMessage(cause, 'Could not save mod details.'));
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              className="ui-button ui-button--primary text-xs"
+            >
+              {saving ? 'Saving…' : 'Save Details'}
+            </button>
+          )}
           <button type="button" onClick={onClose} className="ui-button text-xs">
             Close
           </button>

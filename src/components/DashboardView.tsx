@@ -28,6 +28,7 @@ export function DashboardView({
   const [sortAsc, setSortAsc] = useState(true);
   const [updateReport, setUpdateReport] = useState<{ mods: Mod[]; results: UpdateResults } | null>(null);
   const [checking, setChecking] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [updateError, setUpdateError] = useState('');
   const query = search.trim().toLowerCase();
   const categories = [...new Set(mods.map((mod) => mod.category))].sort((left, right) => left.localeCompare(right));
@@ -189,8 +190,8 @@ export function DashboardView({
               </button>
               <span className="sr-only">Actions</span>
             </div>
-            <div className="divide-y divide-line">
-              {matchingMods.map((mod) => (
+            <div className="max-h-[480px] divide-y divide-line overflow-y-auto">
+              {(expanded ? matchingMods : matchingMods.slice(0, 10)).map((mod) => (
                 <ModCard
                   key={mod.id}
                   mod={mod}
@@ -202,6 +203,20 @@ export function DashboardView({
                 />
               ))}
             </div>
+            {matchingMods.length > 10 && (
+              <div className="flex items-center justify-between border-t border-line bg-chrome/60 px-4 py-2 text-xs text-muted">
+                <span>
+                  Showing {expanded ? matchingMods.length : 10} of {matchingMods.length} mods
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setExpanded((prev) => !prev)}
+                  className="font-medium text-accent transition-colors hover:text-white"
+                >
+                  {expanded ? 'Show 10' : `Expand (${matchingMods.length - 10} more)`}
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="mt-4 flex flex-col items-center gap-3 rounded-md border border-dashed border-line px-4 py-12 text-center">

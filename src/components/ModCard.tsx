@@ -1,4 +1,5 @@
 import { ExternalLink, Folder, Trash2 } from 'lucide-react';
+import { EnabledButton } from './EnabledButton';
 import type { Mod, ModUpdate } from '../types';
 
 interface ModCardProps {
@@ -21,20 +22,7 @@ export function ModCard({ mod, update, onToggle, onOpenFolder, onDelete, onViewD
     <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-white/[0.03] md:grid md:grid-cols-[100px_minmax(180px,1fr)_140px_92px_168px_96px]">
       <div className="flex md:justify-center">
         {mod.enabled !== null ? (
-          <button
-            type="button"
-            aria-pressed={mod.enabled}
-            aria-label={mod.enabled ? `Disable ${mod.name}` : `Enable ${mod.name}`}
-            title={mod.enabled ? 'Enabled (click to disable)' : 'Disabled (click to enable)'}
-            onClick={() => onToggle(mod.id, mod.enabled)}
-            className={`grid h-7 w-20 place-items-center rounded border px-2 text-xs font-semibold transition-colors ${
-              mod.enabled
-                ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-                : 'border-rose-500/35 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'
-            }`}
-          >
-            {mod.enabled ? 'Enabled' : 'Disabled'}
-          </button>
+          <EnabledButton name={mod.name} enabled={mod.enabled} onToggle={() => onToggle(mod.id, mod.enabled)} />
         ) : (
           <span className="text-xs text-muted">External</span>
         )}
