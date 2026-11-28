@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Folder, RotateCw, Save } from 'lucide-react';
+import { ExternalLink, Eye, EyeOff, Folder, RotateCw, Save } from 'lucide-react';
 import { errorMessage } from '../errors';
-import type { AppConfig, ConfigPatch, GameId } from '../types';
+import type { AppConfig, AppUpdateInfo, ConfigPatch, GameId } from '../types';
 
 interface SettingsModalProps {
   config: AppConfig;
@@ -22,6 +22,9 @@ export function SettingsModal({ config, onSaveConfig, onDetectGames }: SettingsM
   const [showApiKey, setShowApiKey] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
+  const [updateChecking, setUpdateChecking] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | null>(null);
+  const [updateError, setUpdateError] = useState('');
 
   function setPath(id: GameId, field: PathField, value: string) {
     setDraftPaths((paths) => ({ ...paths, [id]: { ...paths[id], [field]: value } }));
@@ -168,6 +171,55 @@ export function SettingsModal({ config, onSaveConfig, onDetectGames }: SettingsM
               </button>
             </div>
           </div>
+        </section>
+
+        <section aria-labelledby="app-updates-heading" className="space-y-3 rounded-md border border-line bg-panel p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
+            <div>
+              <h3 id="app-updates-heading" className="text-sm font-semibold text-white">App Updates</h3>
+              <p className="text-xs text-muted">Manual opt-in check against official GitHub Releases.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={updateChecking}
+                onClick={async () => {
+                  const api = window.atelierApi;
+                  if (!api || updateChecking) return;
+                  setUpdateChecking(true);
+                  setUpdateError('');
+                  try {
+                    setUpdateInfo(await api.checkAppUpdate());
+                  } catch (cause) {
+                    setUpdateError(errorMessage(cause, 'Could not check for updates.'));
+                  } finally {
+                    setUpdateChecking(false);
+                  }
+                }}
+                className="ui-button text-xs"
+              >
+                <RotateCw size={13} aria-hidden="true" className={updateChecking ? 'animate-spin' : ''} />
+                {updateChecking ? 'Checking…' : 'Check for updates'}
+              </button>
+              {updateInfo?.updateAvailable && (
+                <button
+                  type="button"
+                  onClick={() => window.atelierApi?.openExternal(updateInfo.releaseUrl)}
+                  className="ui-button ui-button--primary text-xs"
+                >
+                  <ExternalLink size={13} aria-hidden="true" /> Open v{updateInfo.latestVersion}
+                </button>
+              )}
+            </div>
+          </div>
+          {updateError && <p role="alert" className="text-xs text-rose-300">{updateError}</p>}
+          {updateInfo && !updateError && (
+            <p role="status" className="text-xs text-muted">
+              {updateInfo.updateAvailable
+                ? `Update available: v${updateInfo.latestVersion} (current: v${updateInfo.currentVersion}).`
+                : `Up to date (v${updateInfo.currentVersion}).`}
+            </p>
+          )}
         </section>
       </div>
     </section>
