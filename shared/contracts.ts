@@ -187,7 +187,6 @@ export interface AppUpdateInfo {
   latestVersion: string;
   updateAvailable: boolean;
   releaseUrl: string;
-  checksums?: string;
   checkedAt: string;
 }
 
