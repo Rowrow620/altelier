@@ -12,6 +12,7 @@ const { createProfileService } = require('./library/profiles');
 const { createUpdateService } = require('./library/updates');
 const { createDiagnosticsService } = require('./library/diagnostics');
 const { createBackupService } = require('./library/backups');
+const { createLoadOrderService } = require('./library/loadOrder');
 const { syncTweaks, hasActiveTweaks } = require('./library/tweaks');
 
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -66,6 +67,7 @@ const diagnostics = createDiagnosticsService({
   workshopDirectories: gameService.workshopDirectories,
 });
 const backups = createBackupService({ backupsRoot: path.join(userDataPath, 'save-backups') });
+const loadOrder = createLoadOrderService({ store });
 const catalogFiles = (gameId, modId) => getNexusModFiles(gameId, modId, nexusRequest);
 const downloadCatalogMod = createDownloadService({ store, installer, nexusRequest }).downloadAndInstall;
 
@@ -150,5 +152,5 @@ app.on('window-all-closed', () => {
 registerIpc({
   ipcMain, getWindow: () => mainWindow, rendererFile, devUrl,
   store, installer, gameService, library, profiles, checkUpdates, searchCatalog,
-  catalogFiles, downloadCatalogMod, diagnostics, backups, syncTweaks, hasActiveTweaks, dialog, shell,
+  catalogFiles, downloadCatalogMod, diagnostics, backups, loadOrder, syncTweaks, hasActiveTweaks, dialog, shell,
 });

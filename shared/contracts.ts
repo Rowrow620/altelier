@@ -174,6 +174,14 @@ export interface GameDiagnostics {
   storage: StorageSummary;
 }
 
+export interface LoadOrderState {
+  gameId: GameId;
+  available: boolean;
+  sourcePath: string;
+  orders: string[];
+  activeIds: string[];
+}
+
 export interface SaveBackupEntry {
   id: string;
   gameId: GameId;
@@ -235,6 +243,8 @@ export interface AtelierApi {
   getSaveBackups: (gameId: GameId) => Promise<SaveBackupsState>;
   createSaveBackup: (gameId: GameId, label?: string) => Promise<SaveBackupsState>;
   restoreSaveBackup: (gameId: GameId, backupId: string) => Promise<SaveBackupsState>;
+  getLoadOrder: (gameId: GameId) => Promise<LoadOrderState>;
+  saveLoadOrder: (gameId: GameId, orders: string[]) => Promise<LoadOrderState>;
   installModArchive: (gameId: GameId, filePath: string, options?: ArchiveInstallOptions) => Promise<ArchiveInstallResult>;
   installDroppedModArchive: (gameId: GameId, file: File, options?: ArchiveInstallOptions) => Promise<ArchiveInstallResult>;
   selectModArchive: () => Promise<string | null>;

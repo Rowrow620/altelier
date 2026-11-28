@@ -296,3 +296,17 @@ test('profiles capture and restore per-game tweak snapshots securely', (t) => {
     tweaks: { NoGrindAmount: 99999 },
   }), /Invalid gameplay tweak/);
 });
+
+test('loadOrder reads, validates, and writes Lobotomy load order XML securely', (t) => {
+  const { write, store } = setup(t);
+  const lobDir = path.dirname(write('LobotomyCorp/LobotomyCorp.exe'));
+  fs.mkdirSync(path.join(lobDir, 'LobotomyCorp_Data', 'BaseMods'), { recursive: true });
+  store.patch({ games: { lobotomy: { gamePath: lobDir } } });
+
+  const { createLoadOrderService } = require('../electron/library/loadOrder');
+  const loadOrder = createLoadOrderService({ store });
+  const saved = loadOrder.save('lobotomy', ['ModB', 'ModA', 'ModB']);
+  assert.deepEqual(saved.orders, ['ModB', 'ModA']);
+  assert.deepEqual(loadOrder.get('lobotomy').orders, ['ModB', 'ModA']);
+  assert.throws(() => loadOrder.save('lobotomy', ['bad<id>']), /Invalid mod ID/);
+});

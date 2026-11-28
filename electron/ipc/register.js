@@ -33,7 +33,7 @@ function externalUrl(value) {
 
 function registerIpc({
   ipcMain, getWindow, rendererFile, devUrl, store, installer,
-  gameService, library, profiles, checkUpdates, searchCatalog, catalogFiles, downloadCatalogMod, diagnostics, backups, syncTweaks, hasActiveTweaks, dialog, shell,
+  gameService, library, profiles, checkUpdates, searchCatalog, catalogFiles, downloadCatalogMod, diagnostics, backups, loadOrder, syncTweaks, hasActiveTweaks, dialog, shell,
 }) {
   const selectedArchives = new Set();
   const selectedDirectories = new Set();
@@ -195,6 +195,8 @@ function registerIpc({
     if (decision.response !== 1) return backups.list(input?.gameId);
     return backups.restore(input?.gameId, input?.backupId);
   });
+  handle('load-order:get', (gameId) => loadOrder.get(gameId));
+  handle('load-order:save', (input) => loadOrder.save(input?.gameId, input?.orders));
   handle('mods:delete', async (input) => {
     const directory = installer.folder(input?.gameId, input?.modId);
     validateName(input?.modId);
@@ -244,6 +246,9 @@ function registerIpc({
     if (typeof input.modded !== 'boolean') throw new Error('Invalid launch mode.');
     const game = store.read().games[input.gameId];
     syncTweaks?.(game, input.modded);
+    if (input.gameId === 'ruina') {
+      loadOrder?.activateRuinaMod(game, undefined, { active: Boolean(input.modded && hasActiveTweaks?.('ruina', game?.tweaks)) });
+    }
     if (input.modded && hasActiveTweaks?.(input.gameId, game?.tweaks)) {
       try {
         backups?.create(input.gameId, 'Auto-backup: Tweaks active');
