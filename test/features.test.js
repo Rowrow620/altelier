@@ -268,3 +268,31 @@ test('tweaks config validation, deployment sync, and Ruina loader status', (t) =
   assert.equal(report.baseMod.version, 'Not needed');
   assert(!/basemod|harmony/i.test(report.baseMod.details));
 });
+
+test('profiles capture and restore per-game tweak snapshots securely', (t) => {
+  const { write, store, profiles } = setup(t);
+  const ruinaDir = path.dirname(write('Ruina/LibraryOfRuina.exe'));
+  fs.mkdirSync(path.join(ruinaDir, 'LibraryOfRuina_Data', 'Mods'), { recursive: true });
+  store.patch({ activeGame: 'ruina', games: { ruina: { gamePath: ruinaDir } } });
+
+  store.patch({ games: { ruina: { tweaks: { NoGrindBooks: true } } } });
+  profiles.save('GrindFree', 'ruina');
+
+  store.patch({ games: { ruina: { tweaks: { NoGrindBooks: false, MultipleGoldBooks: true } } } });
+  profiles.save('Default', 'ruina');
+
+  const afterGrindFree = profiles.activate('GrindFree', 'ruina');
+  assert.equal(afterGrindFree.games.ruina.tweaks.NoGrindBooks, true);
+  assert.equal(afterGrindFree.games.ruina.tweaks.MultipleGoldBooks, false);
+
+  const afterDefault = profiles.activate('Default', 'ruina');
+  assert.equal(afterDefault.games.ruina.tweaks.NoGrindBooks, false);
+  assert.equal(afterDefault.games.ruina.tweaks.MultipleGoldBooks, true);
+
+  assert.throws(() => profiles.importData('ruina', {
+    gameId: 'ruina',
+    profile: 'Bad',
+    enabledModIds: [],
+    tweaks: { NoGrindAmount: 99999 },
+  }), /Invalid gameplay tweak/);
+});

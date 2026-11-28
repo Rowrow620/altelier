@@ -1,5 +1,5 @@
 const fs = require('node:fs');
-const { profileName, writeAtomic } = require('../config/store');
+const { normalizeTweaks, profileName, writeAtomic } = require('../config/store');
 const { readSmallFile } = require('../files/read');
 const { existingStat, validateGameId, validateName, validatePath } = require('../files/paths');
 
@@ -45,8 +45,14 @@ function createProfileService({ store, installer, journalPath }) {
     clearJournal();
   }
 
-  function capture(gameId, name, root, mods) {
-    return { gameId, name, root, enabled: [...mods.values()].filter((mod) => mod.enabled).map((mod) => mod.name) };
+  function capture(gameId, name, root, mods, config) {
+    return {
+      gameId,
+      name,
+      root,
+      enabled: [...mods.values()].filter((mod) => mod.enabled).map((mod) => mod.name),
+      tweaks: { ...config.games[gameId].tweaks },
+    };
   }
 
   function save(input, requestedGame) {
@@ -57,7 +63,7 @@ function createProfileService({ store, installer, journalPath }) {
     if (config.activeGame !== gameId) throw new Error('Switch back to this game to save its profile.');
     installer.recover(gameId);
     const { root, mods } = installer.profileState(gameId);
-    const snapshot = capture(gameId, name, root, mods);
+    const snapshot = capture(gameId, name, root, mods, config);
     return store.update((next) => {
       if (!next.profiles.includes(name)) {
         if (next.profiles.length >= 100) throw new Error('The library already has 100 profiles.');
@@ -83,7 +89,7 @@ function createProfileService({ store, installer, journalPath }) {
 
     installer.recover(gameId);
     const { root, mods } = installer.profileState(gameId);
-    const outgoing = capture(gameId, config.activeProfile, root, mods);
+    const outgoing = capture(gameId, config.activeProfile, root, mods, config);
     const target = config.profileSnapshots.find((entry) => entry.gameId === gameId && entry.name === name);
     if (target && target.root !== root) throw new Error('This profile uses a different mods folder. Save it again for this folder.');
     const enabled = new Set((target ?? outgoing).enabled.map((value) => value.toLowerCase()));
@@ -92,6 +98,7 @@ function createProfileService({ store, installer, journalPath }) {
     const commit = () => store.update((next) => {
       storeSnapshot(next, outgoing);
       if (!target) storeSnapshot(next, { ...outgoing, name });
+      else if (target.tweaks) next.games[gameId].tweaks = { ...target.tweaks };
       next.gameProfiles[gameId] = name;
     });
     if (!before.length) return commit();
@@ -149,6 +156,11 @@ function createProfileService({ store, installer, journalPath }) {
       profile: name,
       exportedAt: new Date().toISOString(),
       enabledModIds,
+      ...(snapshot?.tweaks
+        ? { tweaks: snapshot.tweaks }
+        : config.gameProfiles[gameId] === name
+          ? { tweaks: { ...config.games[gameId].tweaks } }
+          : {}),
     };
   }
 
@@ -173,6 +185,7 @@ function createProfileService({ store, installer, journalPath }) {
       name,
       root,
       enabled: [...mods.values()].filter((mod) => desiredKeys.has(mod.name.toLowerCase())).map((mod) => mod.name),
+      ...(rawData.tweaks !== undefined ? { tweaks: normalizeTweaks(gameId, rawData.tweaks) } : {}),
     };
     const nextConfig = store.update((next) => {
       if (!next.profiles.includes(name)) {

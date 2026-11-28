@@ -110,7 +110,13 @@ function normalizeConfig(data) {
       if (!root || keys.has(key) || !config.profiles.includes(name) ||
           !Array.isArray(snapshot.enabled) || snapshot.enabled.length > 10000) throw new Error('Invalid saved profile.');
       keys.add(key);
-      config.profileSnapshots.push({ name, gameId, root, enabled: [...new Set(snapshot.enabled.map(validateName))] });
+      config.profileSnapshots.push({
+        name,
+        gameId,
+        root,
+        enabled: [...new Set(snapshot.enabled.map(validateName))],
+        ...(snapshot.tweaks !== undefined ? { tweaks: normalizeTweaks(gameId, snapshot.tweaks) } : {}),
+      });
     }
   }
   return config;
@@ -189,4 +195,4 @@ function createConfigStore(filePath, persist = writeAtomic) {
   return { read, update, patch };
 }
 
-module.exports = { createConfigStore, writeAtomic, writeFileAtomic, profileName };
+module.exports = { createConfigStore, normalizeTweaks, writeAtomic, writeFileAtomic, profileName };
