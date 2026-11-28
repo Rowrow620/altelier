@@ -285,6 +285,20 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
                   ))}
                 </ul>
               )}
+              {game.id === 'lobotomy' && data.baseMod.status !== 'ok' && data.baseMod.nexusUrl && (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-chrome/60 px-4 py-2.5 text-xs text-stone-300">
+                  <span>
+                    To install or update BaseMod, download the release archive and extract <code className="font-mono text-white">LobotomyBaseModLib.dll</code>, <code className="font-mono text-white">0Harmony.dll</code>, and <code className="font-mono text-white">Assembly-CSharp.dll</code> into <code className="font-mono text-white">LobotomyCorp_Data/Managed/</code>.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => window.atelierApi?.openExternal(data.baseMod.nexusUrl)}
+                    className="ui-button h-7 min-h-7 shrink-0 text-xs"
+                  >
+                    <ExternalLink size={12} aria-hidden="true" /> Open Nexus BaseMod
+                  </button>
+                </div>
+              )}
             </>
           )}
         </section>

@@ -20,6 +20,25 @@ export const ModDetailsModal: React.FC<ModDetailsModalProps> = ({ gameId, mod, o
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [savedNotice, setSavedNotice] = useState('');
+  const [initialConfigText, setInitialConfigText] = useState<string | null>(null);
+  const [configText, setConfigText] = useState<string | null>(null);
+  const [savingConfig, setSavingConfig] = useState(false);
+
+  useEffect(() => {
+    const api = window.atelierApi;
+    if (!api || !mod || mod.source === 'workshop') return;
+    let active = true;
+    void api.readModConfig(gameId, mod.folderName)
+      .then((text) => {
+        if (!active) return;
+        setInitialConfigText(text);
+        setConfigText(text);
+      })
+      .catch(() => {
+        if (active) setConfigText(null);
+      });
+    return () => { active = false; };
+  }, [gameId, mod]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -116,6 +135,56 @@ export const ModDetailsModal: React.FC<ModDetailsModalProps> = ({ gameId, mod, o
                   />
                 </label>
               </div>
+            </div>
+          )}
+
+          {mod.source !== 'workshop' && configText !== null && (
+            <div className="space-y-2.5 border-t border-line pt-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-mono text-xs font-semibold uppercase tracking-wider text-muted">
+                  Mod Config
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={savingConfig || configText === initialConfigText}
+                    onClick={() => setConfigText(initialConfigText)}
+                    className="ui-button h-7 min-h-7 text-xs disabled:opacity-45"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingConfig || configText === initialConfigText}
+                    onClick={async () => {
+                      const api = window.atelierApi;
+                      if (!api || savingConfig || configText === null) return;
+                      setSavingConfig(true);
+                      setError('');
+                      setSavedNotice('');
+                      try {
+                        await api.saveModConfig(gameId, mod.folderName, configText);
+                        setInitialConfigText(configText);
+                        setSavedNotice('Saved mod configuration.');
+                      } catch (cause) {
+                        setError(errorMessage(cause, 'Could not save mod configuration.'));
+                      } finally {
+                        setSavingConfig(false);
+                      }
+                    }}
+                    className="ui-button ui-button--primary h-7 min-h-7 text-xs disabled:opacity-45"
+                  >
+                    {savingConfig ? 'Saving…' : 'Save Config'}
+                  </button>
+                </div>
+              </div>
+              <textarea
+                value={configText}
+                onChange={(e) => setConfigText(e.target.value)}
+                rows={7}
+                spellCheck={false}
+                className="w-full rounded border border-line bg-field p-3 font-mono text-xs leading-relaxed text-stone-200 focus:border-accent focus:outline-none"
+              />
             </div>
           )}
         </div>
