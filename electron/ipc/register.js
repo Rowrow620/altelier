@@ -179,6 +179,10 @@ function registerIpc({
   });
   handle('diagnostics:fix', (input) => diagnostics.fixIssue(input?.gameId, input?.issueId));
   handle('diagnostics:clean-temp', (gameId) => diagnostics.cleanTempFolders(gameId));
+  handle('diagnostics:install-basemod', (filePath) => {
+    if (!selectedArchives.has(filePath)) throw new Error('Choose a BaseMod archive through the file picker.');
+    return diagnostics.installBaseMod(filePath);
+  });
   handle('backups:list', (gameId) => backups.list(gameId));
   handle('backups:create', (input) => backups.create(input?.gameId, input?.label));
   handle('backups:restore', async (input) => {
@@ -197,7 +201,7 @@ function registerIpc({
   });
   handle('load-order:get', (gameId) => loadOrder.get(gameId));
   handle('load-order:save', (input) => loadOrder.save(input?.gameId, input?.orders));
-  handle('logs:get', (gameId) => readGameLogs(gameId));
+  handle('logs:get', (gameId) => readGameLogs(gameId, { gamePath: store.read().games[validateGameId(gameId)]?.gamePath }));
   handle('app:check-update', () => checkAppUpdate());
   handle('mods:delete', async (input) => {
     const directory = installer.folder(input?.gameId, input?.modId);
@@ -210,6 +214,32 @@ function registerIpc({
     if (installer.folder(input.gameId, input.modId) !== directory) throw new Error('The mods folder changed. Try deleting the mod again.');
     installer.deleteMod(input?.gameId, input?.modId);
     return library.scan(store.read().games[input.gameId]);
+  });
+  handle('mods:delete-many', async (input) => {
+    const gameId = validateGameId(input?.gameId);
+    if (!Array.isArray(input?.modIds) || input.modIds.length === 0 || input.modIds.length > 500) {
+      throw new Error('Choose one or more mods to delete.');
+    }
+    const cleanIds = [...new Set(input.modIds.map(validateName))];
+    const targets = cleanIds.map((modId) => ({ modId, dir: installer.folder(gameId, modId) }));
+    const decision = await dialog.showMessageBox(getWindow(), {
+      type: 'warning',
+      title: 'Delete selected mods?',
+      message: `Delete ${targets.length} selected ${targets.length === 1 ? 'mod' : 'mods'}?`,
+      detail: targets.map((t) => t.modId).join(', '),
+      buttons: ['Cancel', 'Delete'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    });
+    if (decision.response !== 1) return false;
+    for (const target of targets) {
+      if (installer.folder(gameId, target.modId) !== target.dir) {
+        throw new Error('The mods folder changed. Try deleting the mods again.');
+      }
+      installer.deleteMod(gameId, target.modId);
+    }
+    return library.scan(store.read().games[gameId]);
   });
   handle('mods:open-folder', async (input) => {
     validateGameId(input?.gameId);

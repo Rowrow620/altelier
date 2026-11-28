@@ -42,6 +42,7 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
   const [backupsState, setBackupsState] = useState<SaveBackupsState | null>(null);
   const [loadOrderState, setLoadOrderState] = useState<LoadOrderState | null>(null);
   const [logsState, setLogsState] = useState<GameLogState | null>(null);
+  const [selectedLogId, setSelectedLogId] = useState('player');
   const [errorsOnly, setErrorsOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -296,13 +297,41 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
                   <span>
                     To install or update BaseMod, download the release archive and extract <code className="font-mono text-white">LobotomyBaseModLib.dll</code>, <code className="font-mono text-white">0Harmony.dll</code>, and <code className="font-mono text-white">Assembly-CSharp.dll</code> into <code className="font-mono text-white">LobotomyCorp_Data/Managed/</code>.
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => window.atelierApi?.openExternal(data.baseMod.nexusUrl)}
-                    className="ui-button h-7 min-h-7 shrink-0 text-xs"
-                  >
-                    <ExternalLink size={12} aria-hidden="true" /> Open Nexus BaseMod
-                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={async () => {
+                        const api = window.atelierApi;
+                        if (!api || busy) return;
+                        setBusy(true);
+                        setError('');
+                        setNotice('');
+                        try {
+                          const picked = await api.selectModArchive();
+                          if (picked) {
+                            setData(await api.installBaseMod(picked));
+                            setNotice('BaseMod installed cleanly with a Managed backup.');
+                            onLibraryChanged();
+                          }
+                        } catch (cause) {
+                          setError(errorMessage(cause, 'Could not install BaseMod archive.'));
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                      className="ui-button ui-button--primary h-7 min-h-7 text-xs"
+                    >
+                      Install BaseMod ZIP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => window.atelierApi?.openExternal(data.baseMod.nexusUrl)}
+                      className="ui-button h-7 min-h-7 text-xs"
+                    >
+                      <ExternalLink size={12} aria-hidden="true" /> Open Nexus BaseMod
+                    </button>
+                  </div>
                 </div>
               )}
             </>
@@ -536,35 +565,58 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
           </div>
         )}
 
-        {subTab === 'logs' && (
+        {subTab === 'logs' && (() => {
+          const sources = logsState?.sources?.length ? logsState.sources : (logsState ? [{ id: 'player', label: 'Player.log', logPath: logsState.logPath, exists: logsState.exists, lines: logsState.lines, errorCount: logsState.errorCount }] : []);
+          const currentLog = sources.find((s) => s.id === selectedLogId) ?? sources[0] ?? null;
+          return (
           <div id="opt-panel-logs" role="tabpanel" aria-labelledby="opt-tab-logs" className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-line bg-panel px-4 py-3">
               <div className="min-w-0 flex-1 space-y-0.5">
-                <div className="text-sm font-semibold text-white">Unity Player.log</div>
-                <div className="truncate font-mono text-xs text-muted" title={logsState?.logPath || ''}>
-                  {logsState?.logPath || 'Checking log path…'}
+                <div className="text-sm font-semibold text-white">{currentLog?.label ?? 'Unity Player.log'}</div>
+                <div className="truncate font-mono text-xs text-muted" title={currentLog?.logPath || ''}>
+                  {currentLog?.logPath || 'Checking log path…'}
                 </div>
               </div>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-stone-200">
-                <input
-                  type="checkbox"
-                  checked={errorsOnly}
-                  onChange={(e) => setErrorsOnly(e.target.checked)}
-                  className="size-3.5 accent-[var(--color-accent)]"
-                />
-                <span>Errors only ({logsState?.errorCount ?? 0})</span>
-              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                {sources.length > 1 && (
+                  <div className="flex items-center gap-1">
+                    {sources.map((src) => (
+                      <button
+                        key={src.id}
+                        type="button"
+                        onClick={() => setSelectedLogId(src.id)}
+                        className={`rounded border px-2 py-1 font-mono text-[11px] transition-colors ${
+                          currentLog?.id === src.id
+                            ? 'border-accent bg-accent/20 text-white'
+                            : 'border-line bg-field text-muted hover:text-white'
+                        }`}
+                      >
+                        {src.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <label className="flex cursor-pointer items-center gap-2 text-xs text-stone-200">
+                  <input
+                    type="checkbox"
+                    checked={errorsOnly}
+                    onChange={(e) => setErrorsOnly(e.target.checked)}
+                    className="size-3.5 accent-[var(--color-accent)]"
+                  />
+                  <span>Errors only ({currentLog?.errorCount ?? 0})</span>
+                </label>
+              </div>
             </div>
-            {!logsState ? (
+            {!currentLog ? (
               <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm text-muted">Loading log tail…</div>
-            ) : !logsState.exists ? (
+            ) : !currentLog.exists ? (
               <div className="rounded-md border border-line bg-panel px-4 py-3 text-xs text-muted">
-                No Player.log found yet. Launch the game once to generate Unity logs.
+                No {currentLog.label} found yet. Launch the game once to generate logs.
               </div>
             ) : (() => {
               const visibleLines = errorsOnly
-                ? logsState.lines.filter((line) => /\b(error|fail)\b|exception/i.test(line))
-                : logsState.lines;
+                ? currentLog.lines.filter((line) => /\b(error|fail)\b|exception/i.test(line))
+                : currentLog.lines;
               return visibleLines.length === 0 ? (
                 <div className="rounded-md border border-line bg-panel px-4 py-3 text-xs text-emerald-300">
                   No error or exception lines found in the recent log tail.
@@ -576,7 +628,8 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
               );
             })()}
           </div>
-        )}
+          );
+        })()}
 
         {subTab === 'launch' && (
           <div id="opt-panel-launch" role="tabpanel" aria-labelledby="opt-tab-launch" className="divide-y divide-line overflow-hidden rounded-md border border-line bg-panel">

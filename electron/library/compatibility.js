@@ -308,4 +308,61 @@ function fixCompatibilityIssue({ store, installer, gameId, issueId }) {
   throw new Error('Unsupported compatibility fix.');
 }
 
-module.exports = { detectBaseModInfo, scanCompatibility, fixCompatibilityIssue };
+function installBaseModArchive(game, filePath) {
+  if (!game || game.id !== 'lobotomy' || !lobotomy.validInstall(game)) {
+    throw new Error('Configure a valid Lobotomy Corporation folder in Settings first.');
+  }
+  if (!filePath || !existingStat(filePath)?.isFile() || path.extname(filePath).toLowerCase() !== '.zip') {
+    throw new Error('Choose a BaseMod .zip archive.');
+  }
+  const AdmZip = require('adm-zip');
+  const zip = new AdmZip(filePath);
+  const entries = zip.getEntries().filter((entry) => !entry.isDirectory);
+  if (entries.length === 0 || entries.length > 5000) {
+    throw new Error('BaseMod archive is empty or contains too many files.');
+  }
+  const dllFiles = [];
+  let hasBaseModLib = false;
+  let prefix = '';
+  for (const entry of entries) {
+    const norm = entry.entryName.replace(/\\/g, '/');
+    if (norm.includes('..') || path.posix.isAbsolute(norm)) {
+      throw new Error('Archive contains unsafe file paths.');
+    }
+    if (path.posix.basename(norm).toLowerCase() === 'lobotomybasemodlib.dll') {
+      hasBaseModLib = true;
+      const idx = norm.toLowerCase().lastIndexOf('lobotomybasemodlib.dll');
+      prefix = norm.slice(0, idx);
+    }
+  }
+  if (!hasBaseModLib) {
+    throw new Error('This ZIP does not contain LobotomyBaseModLib.dll.');
+  }
+
+  const managedDir = path.join(game.gamePath, 'LobotomyCorp_Data', 'Managed');
+  fs.mkdirSync(managedDir, { recursive: true });
+  const backupDir = path.join(managedDir, `.atelier-basemod-backup-${Date.now()}`);
+  fs.mkdirSync(backupDir, { recursive: true });
+  for (const coreName of ['Assembly-CSharp.dll', '0Harmony.dll', 'LobotomyBaseModLib.dll']) {
+    const existing = path.join(managedDir, coreName);
+    if (existingStat(existing)?.isFile()) {
+      fs.copyFileSync(existing, path.join(backupDir, coreName));
+    }
+  }
+
+  let extracted = 0;
+  for (const entry of entries) {
+    const norm = entry.entryName.replace(/\\/g, '/');
+    if (!norm.startsWith(prefix)) continue;
+    const rel = norm.slice(prefix.length);
+    if (!rel || rel.startsWith('/') || rel.includes('..')) continue;
+    const target = path.resolve(managedDir, rel);
+    if (!target.startsWith(path.resolve(managedDir) + path.sep)) continue;
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, entry.getData());
+    extracted++;
+  }
+  return { extracted, backupDir };
+}
+
+module.exports = { detectBaseModInfo, scanCompatibility, fixCompatibilityIssue, installBaseModArchive };

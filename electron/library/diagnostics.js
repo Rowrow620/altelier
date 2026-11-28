@@ -5,7 +5,7 @@ const { getModsDirectory, installWarnings, isNativeModsDirectory } = require('..
 const { inactiveDirectory, stableName } = require('../install/activation');
 const lobotomy = require('../games/lobotomy');
 const ruina = require('../games/ruina');
-const { detectBaseModInfo, fixCompatibilityIssue, scanCompatibility } = require('./compatibility');
+const { detectBaseModInfo, fixCompatibilityIssue, installBaseModArchive, scanCompatibility } = require('./compatibility');
 
 const adapters = { lobotomy, ruina };
 const IGNORED_CONFLICT_FILES = new Set([
@@ -185,7 +185,13 @@ function createDiagnosticsService({ store, installer, workshopDirectories }) {
     return analyze(id);
   }
 
-  return { analyze, fixIssue, cleanTempFolders };
+  function installBaseMod(filePath) {
+    const game = store.read().games.lobotomy;
+    installBaseModArchive(game, filePath);
+    return analyze('lobotomy');
+  }
+
+  return { analyze, fixIssue, cleanTempFolders, installBaseMod };
 }
 
 module.exports = { createDiagnosticsService };

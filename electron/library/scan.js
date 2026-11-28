@@ -120,6 +120,20 @@ function findPreviews(folder) {
 }
 
 function createLibrary({ store, workshopDirectories, localFolder }) {
+  const workshopCache = new Map();
+
+  function describeWorkshop(game, folder, enabled) {
+    const manifestPath = path.join(folder, 'StageModInfo.xml');
+    const mtimeMs = existingStat(manifestPath)?.mtimeMs ?? existingStat(folder)?.mtimeMs ?? 0;
+    const cached = workshopCache.get(folder);
+    if (cached && cached.mtimeMs === mtimeMs) {
+      return { ...cached.mod, enabled };
+    }
+    const mod = describe(game, folder, 'workshop', enabled);
+    workshopCache.set(folder, { mtimeMs, mod });
+    return mod;
+  }
+
   function scan(game) {
     const directory = getModsDirectory(game);
     const root = directory && existingStat(directory)?.isDirectory() ? modsRoot(directory) : '';
@@ -136,7 +150,7 @@ function createLibrary({ store, workshopDirectories, localFolder }) {
         const id = path.basename(folder);
         if (items.has(id)) continue;
         items.add(id);
-        result.push(describe(game, folder, 'workshop', !disabledWorkshop.has(id)));
+        result.push(describeWorkshop(game, folder, !disabledWorkshop.has(id)));
       }
     }
     return result.sort((left, right) => left.name.localeCompare(right.name));

@@ -187,7 +187,17 @@ export interface AppUpdateInfo {
   latestVersion: string;
   updateAvailable: boolean;
   releaseUrl: string;
+  checksums?: string;
   checkedAt: string;
+}
+
+export interface GameLogSource {
+  id: string;
+  label: string;
+  logPath: string;
+  exists: boolean;
+  lines: string[];
+  errorCount: number;
 }
 
 export interface GameLogState {
@@ -196,6 +206,7 @@ export interface GameLogState {
   exists: boolean;
   lines: string[];
   errorCount: number;
+  sources?: GameLogSource[];
 }
 
 export interface SaveBackupEntry {
@@ -252,10 +263,12 @@ export interface AtelierApi {
   toggleMod: (gameId: GameId, modId: string, enable: boolean) => Promise<Mod[] | false>;
   toggleAllMods: (gameId: GameId, enable: boolean) => Promise<Mod[] | false>;
   deleteMod: (gameId: GameId, modId: string) => Promise<Mod[] | false>;
+  deleteMods: (gameId: GameId, modIds: string[]) => Promise<Mod[] | false>;
   openModFolder: (gameId: GameId, modId?: string) => Promise<boolean>;
   getDiagnostics: (gameId: GameId) => Promise<GameDiagnostics>;
   fixCompatibilityIssue: (gameId: GameId, issueId: string) => Promise<GameDiagnostics>;
   cleanTempFolders: (gameId: GameId) => Promise<GameDiagnostics>;
+  installBaseMod: (filePath: string) => Promise<GameDiagnostics>;
   getSaveBackups: (gameId: GameId) => Promise<SaveBackupsState>;
   createSaveBackup: (gameId: GameId, label?: string) => Promise<SaveBackupsState>;
   restoreSaveBackup: (gameId: GameId, backupId: string) => Promise<SaveBackupsState>;
