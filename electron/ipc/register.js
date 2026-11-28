@@ -33,7 +33,7 @@ function externalUrl(value) {
 
 function registerIpc({
   ipcMain, getWindow, rendererFile, devUrl, store, installer,
-  gameService, library, profiles, checkUpdates, searchCatalog, catalogFiles, downloadCatalogMod, diagnostics, backups, dialog, shell,
+  gameService, library, profiles, checkUpdates, searchCatalog, catalogFiles, downloadCatalogMod, diagnostics, backups, syncTweaks, hasActiveTweaks, dialog, shell,
 }) {
   const selectedArchives = new Set();
   const selectedDirectories = new Set();
@@ -242,6 +242,15 @@ function registerIpc({
   handle('game:launch', async (input) => {
     validateGameId(input?.gameId);
     if (typeof input.modded !== 'boolean') throw new Error('Invalid launch mode.');
+    const game = store.read().games[input.gameId];
+    syncTweaks?.(game, input.modded);
+    if (input.modded && hasActiveTweaks?.(input.gameId, game?.tweaks)) {
+      try {
+        backups?.create(input.gameId, 'Auto-backup: Tweaks active');
+      } catch {
+        // Ignore if save folder does not exist yet
+      }
+    }
     return gameService.launch(input.gameId, input.modded, installer.prepareLaunch);
   });
   handle('shell:open-external', async (url) => {

@@ -104,6 +104,12 @@ function createBackupService({ backupsRoot, localLowRoot = defaultLocalLow() }) 
       };
       fs.writeFileSync(path.join(tmpDir, 'backup.json'), JSON.stringify(meta, null, 2), 'utf8');
       fs.renameSync(tmpDir, finalDir);
+      if (meta.label.startsWith('Auto-backup:')) {
+        const autoBackups = list(id).backups.filter((entry) => entry.label.startsWith('Auto-backup:'));
+        for (const stale of autoBackups.slice(5)) {
+          fs.rmSync(path.join(root, stale.id), { recursive: true, force: true });
+        }
+      }
       return list(id);
     } catch (error) {
       fs.rmSync(tmpDir, { recursive: true, force: true });

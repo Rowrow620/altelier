@@ -114,6 +114,7 @@ export function useConfig() {
 
   return {
     config, loading, error, dismissError: () => setError(null), selectGame, saveConfig, detectGames,
+    waitForPendingSave: () => pending.current,
     activateProfile, saveProfile, deleteProfile, exportProfile, importProfile,
   };
 }

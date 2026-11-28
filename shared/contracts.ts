@@ -99,6 +99,21 @@ export interface Mod {
   workshopUrl?: string;
 }
 
+export interface GameplayTweaks {
+  SpeedMultiplier?: number;
+  UnlimitedLob?: boolean;
+  KeepAgentsForever?: boolean;
+  UnlimitedEgo?: boolean;
+  UnlockAllEgos?: boolean;
+  NoGrindBooks?: boolean;
+  NoGrindBurnCards?: boolean;
+  NoGrindAmount?: number;
+  MultiplePurpleBooks?: boolean;
+  MultipleGoldBooks?: boolean;
+  MultipleCommonBooks?: boolean;
+  KeyPageLimit?: number;
+}
+
 export interface GameConfig {
   id: GameId;
   name: string;
@@ -111,6 +126,7 @@ export interface GameConfig {
   enabledModIds: string[];
   disabledWorkshopIds: string[];
   launchArgs: string[];
+  tweaks: GameplayTweaks;
 }
 
 export interface ModConflict {
@@ -185,7 +201,7 @@ export interface AppConfig {
 export interface ConfigPatch {
   activeGame?: GameId;
   nexusApiKey?: string;
-  games?: Partial<Record<GameId, { gamePath?: string; modsPath?: string; launchArgs?: string[] }>>;
+  games?: Partial<Record<GameId, { gamePath?: string; modsPath?: string; launchArgs?: string[]; tweaks?: GameplayTweaks }>>;
 }
 
 export interface AtelierApi {

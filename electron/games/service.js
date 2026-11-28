@@ -6,6 +6,7 @@ const lobotomy = require('./lobotomy');
 const ruina = require('./ruina');
 const { existingStat } = require('../files/paths');
 const { inactiveSuffix } = require('../install/activation');
+const { prepareTweaks } = require('../tweaks/service');
 
 const adapters = { lobotomy, ruina };
 
@@ -96,8 +97,10 @@ function createGameService({ store, steam = createSteamDiscovery(), start = star
 
   async function launch(gameId, modded, prepare) {
     const game = store.read().games[gameId];
-    const plan = adapters[game.id].launchPlan(game, modded);
+    const adapter = adapters[game.id];
+    const plan = adapter.launchPlan(game, modded);
     prepare(gameId, modded);
+    if (modded) prepareTweaks(game, adapter.defaultMods(game));
     await start({ ...plan, args: [...(plan.args ?? []), ...(game.launchArgs ?? [])] });
     return plan.message ?? 'Launch requested for ' + game.name + '.';
   }

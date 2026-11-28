@@ -229,3 +229,42 @@ test('Ruina BaseMods migration, save backups, and profile JSON import', (t) => {
   assert.equal(afterRestore.backups.length, 2); // includes automatic "Before restore" snapshot
   assert.equal(fs.readFileSync(path.join(localLow, 'Project_Moon/LibraryOfRuina/save.dat'), 'utf8'), 'original-save');
 });
+
+test('tweaks config validation, deployment sync, and Ruina loader status', (t) => {
+  const { dir, write, store, diagnostics } = setup(t);
+  const ruinaDir = path.dirname(write('Ruina/LibraryOfRuina.exe'));
+  fs.mkdirSync(path.join(ruinaDir, 'LibraryOfRuina_Data', 'Mods'), { recursive: true });
+  store.patch({
+    activeGame: 'ruina',
+    games: {
+      ruina: {
+        gamePath: ruinaDir,
+        tweaks: { NoGrindBooks: true, MultiplePurpleBooks: true },
+      },
+      lobotomy: {
+        tweaks: { UnlimitedLob: true, SpeedMultiplier: 4 },
+      },
+    },
+  });
+
+  const cfg = store.read();
+  assert.equal(cfg.games.ruina.tweaks.NoGrindBooks, true);
+  assert.equal(cfg.games.lobotomy.tweaks.SpeedMultiplier, 4);
+  assert.throws(() => store.patch({ games: { lobotomy: { tweaks: { SpeedMultiplier: 99 } } } }), /Invalid gameplay tweak/);
+
+  const { syncTweaks } = require('../electron/library/tweaks');
+  const deployed = syncTweaks(cfg.games.ruina, true);
+  assert.equal(deployed.active, true);
+  const cfgText = fs.readFileSync(path.join(ruinaDir, 'LibraryOfRuina_Data/Mods/.atelier-tweaks/tweaks.cfg'), 'utf8');
+  assert(cfgText.includes('NoGrindBooks=true'));
+  assert(cfgText.includes('MultiplePurpleBooks=true'));
+
+  const vanilla = syncTweaks(cfg.games.ruina, false);
+  assert.equal(vanilla.active, false);
+  assert.equal(fs.existsSync(path.join(ruinaDir, 'LibraryOfRuina_Data/Mods/.atelier-tweaks')), false);
+
+  const report = diagnostics.analyze('ruina');
+  assert.equal(report.baseMod.loaderName, 'Not needed');
+  assert.equal(report.baseMod.version, 'Not needed');
+  assert(!/basemod|harmony/i.test(report.baseMod.details));
+});

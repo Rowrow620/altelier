@@ -18,7 +18,14 @@
       "baseModInstalled": false,
       "enabledModIds": [],
       "disabledWorkshopIds": [],
-      "launchArgs": []
+      "launchArgs": [],
+      "tweaks": {
+        "SpeedMultiplier": 0,
+        "UnlimitedLob": false,
+        "KeepAgentsForever": false,
+        "UnlimitedEgo": false,
+        "UnlockAllEgos": false
+      }
     },
     "ruina": {
       "id": "ruina",
@@ -34,7 +41,16 @@
       "baseModInstalled": false,
       "enabledModIds": [],
       "disabledWorkshopIds": [],
-      "launchArgs": []
+      "launchArgs": [],
+      "tweaks": {
+        "NoGrindBooks": false,
+        "NoGrindBurnCards": false,
+        "NoGrindAmount": 10,
+        "MultiplePurpleBooks": false,
+        "MultipleGoldBooks": false,
+        "MultipleCommonBooks": false,
+        "KeyPageLimit": 10
+      }
     }
   }
 }

@@ -80,6 +80,70 @@ test('finds games and Workshop items in a secondary Steam library through the ma
   assert(fs.existsSync(item));
 });
 
+test('applies per-game tweak settings only on modded launch', async (t) => {
+  const { write, store, installer } = fixture(t);
+  const lobotomy = path.dirname(write('Lobotomy/LobotomyCorp.exe'));
+  write('Lobotomy/LobotomyCorp_Data/Managed/0Harmony.dll');
+  const ruina = path.dirname(write('Ruina/LibraryOfRuina.exe'));
+  store.patch({ games: { lobotomy: { gamePath: lobotomy }, ruina: { gamePath: ruina } } });
+  const launches = [];
+  const games = createGameService({ store, start: async (plan) => { launches.push(plan); } });
+  const lobotomyPackage = path.join(lobotomy, 'LobotomyCorp_Data', 'BaseMods', '.atelier-tweaks');
+  const ruinaPackage = path.join(ruina, 'LibraryOfRuina_Data', 'Mods', '.atelier-tweaks');
+
+  assert.equal(store.read().games.ruina.tweaks.NoGrindBooks, false);
+  await games.launch('ruina', true, installer.prepareLaunch);
+  assert(!fs.existsSync(ruinaPackage));
+  store.patch({ games: { lobotomy: { tweaks: { UnlimitedLob: true, SpeedMultiplier: 4 } } } });
+  store.patch({ games: { ruina: { tweaks: { NoGrindBooks: true, NoGrindAmount: 37 } } } });
+  store.patch({ games: { ruina: { tweaks: { MultipleGoldBooks: true } } } });
+  assert.throws(() => store.patch({ games: { ruina: { tweaks: { UnlimitedLob: true } } } }), /Invalid gameplay tweak/);
+  for (const amount of [-1, 3.5, 100]) {
+    assert.throws(() => store.patch({ games: { ruina: { tweaks: { NoGrindAmount: amount } } } }), /Invalid gameplay tweak/);
+  }
+
+  await games.launch('ruina', false, installer.prepareLaunch);
+  assert(!fs.existsSync(ruinaPackage));
+  assert.deepEqual(launches.at(-1).args, []);
+  await games.launch('ruina', true, installer.prepareLaunch);
+  await games.launch('lobotomy', true, installer.prepareLaunch);
+
+  assert.match(fs.readFileSync(path.join(ruinaPackage, 'StageModInfo.xml'), 'utf8'), /<Title>Atelier Tweaks<\/Title>/);
+  for (const asset of ['AtelierTweaks.dll', '0Harmony.dll']) {
+    assert.equal(fs.readFileSync(path.join(ruinaPackage, 'Assemblies', asset)).subarray(0, 2).toString(), 'MZ');
+  }
+  assert.equal(fs.readFileSync(path.join(lobotomyPackage, 'AtelierLobotomyTweaks.dll')).subarray(0, 2).toString(), 'MZ');
+  assert.match(fs.readFileSync(path.join(lobotomyPackage, 'tweaks.cfg'), 'utf8'), /SpeedMultiplier=4\nUnlimitedLob=true/);
+  const configFile = path.join(ruinaPackage, 'tweaks.cfg');
+  assert.match(fs.readFileSync(configFile, 'utf8'), /NoGrindBooks=true\nNoGrindBurnCards=false\nNoGrindAmount=37/);
+  assert.match(fs.readFileSync(configFile, 'utf8'), /MultipleGoldBooks=true/);
+  assert.deepEqual(launches.at(-2).args, ['-mod']);
+
+  const installedAssembly = path.join(ruinaPackage, 'Assemblies', 'AtelierTweaks.dll');
+  const bundledAssembly = fs.readFileSync(installedAssembly);
+  fs.writeFileSync(installedAssembly, 'older plugin');
+  for (const amount of [0, 99]) {
+    store.patch({ games: { ruina: { tweaks: { NoGrindAmount: amount } } } });
+    await games.launch('ruina', true, installer.prepareLaunch);
+    assert(fs.readFileSync(configFile, 'utf8').includes('NoGrindAmount=' + amount + '\n'));
+  }
+  assert.deepEqual(fs.readFileSync(installedAssembly), bundledAssembly);
+
+  store.patch({ games: { ruina: { tweaks: { NoGrindBooks: false, MultipleGoldBooks: false } } } });
+  await games.launch('ruina', true, installer.prepareLaunch);
+  assert.doesNotMatch(fs.readFileSync(configFile, 'utf8'), /=true/);
+});
+
+test('preserves an existing folder that Atelier Tweaks does not own', async (t) => {
+  const { write, store, installer } = fixture(t);
+  const ruina = path.dirname(write('Ruina/LibraryOfRuina.exe'));
+  const otherConfig = write('Ruina/LibraryOfRuina_Data/Mods/.atelier-tweaks/tweaks.cfg', 'keep this file');
+  store.patch({ games: { ruina: { gamePath: ruina, tweaks: { NoGrindBooks: true } } } });
+  const games = createGameService({ store, start: async () => assert.fail('Launched before resolving the folder conflict') });
+  await assert.rejects(games.launch('ruina', true, installer.prepareLaunch), /Atelier Tweaks folder is already in use/);
+  assert.equal(fs.readFileSync(otherConfig, 'utf8'), 'keep this file');
+});
+
 test('installs, moves and removes a local mod for either native loader and preserves legacy disabled folders', async (t) => {
   const { directory, write, store, installer } = fixture(t);
   const lCorp = path.dirname(write('LobotomyCorp/LobotomyCorp.exe'));

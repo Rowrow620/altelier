@@ -38,6 +38,24 @@ function normalizeWorkshopIds(ids) {
   }
   return [...new Set(ids)];
 }
+
+function normalizeTweaks(gameId, input, previous = DEFAULT_CONFIG.games[gameId].tweaks) {
+  if (input === undefined) return { ...previous };
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid gameplay tweaks.');
+  const next = { ...previous };
+  for (const [key, value] of Object.entries(input)) {
+    if (!Object.hasOwn(previous, key) || typeof value !== typeof previous[key] ||
+      (typeof value === 'number' && !Number.isInteger(value)) ||
+      (key === 'SpeedMultiplier' && ![0, 2, 4, 8].includes(value)) ||
+      (key === 'NoGrindAmount' && (value < 0 || value > 99)) ||
+      (key === 'KeyPageLimit' && ![5, 10, 25, 99].includes(value))) {
+      throw new Error('Invalid gameplay tweak: ' + key + '.');
+    }
+    next[key] = value;
+  }
+  return next;
+}
+
 function profileName(value) {
   if (typeof value !== 'string' || !value.trim() || value.length > 100 || /[\u0000-\u001f]/.test(value)) {
     throw new Error('Enter a profile name up to 100 characters.');
@@ -75,6 +93,7 @@ function normalizeConfig(data) {
     }
     game.disabledWorkshopIds = normalizeWorkshopIds(stored.disabledWorkshopIds);
     game.launchArgs = normalizeLaunchArgs(stored.launchArgs);
+    game.tweaks = normalizeTweaks(id, stored.tweaks);
   }
   config.activeProfile = config.gameProfiles[config.activeGame];
   config.profileSnapshots = [];
@@ -97,12 +116,12 @@ function normalizeConfig(data) {
   return config;
 }
 
-function writeAtomic(filePath, value) {
+function writeFileAtomic(filePath, contents) {
   const temporary = `${filePath}.${randomUUID()}.tmp`;
   let descriptor;
   try {
     descriptor = fs.openSync(temporary, 'wx', 0o600);
-    fs.writeFileSync(descriptor, JSON.stringify(value, null, 2), 'utf8');
+    fs.writeFileSync(descriptor, contents, 'utf8');
     fs.fsyncSync(descriptor);
     fs.closeSync(descriptor);
     descriptor = undefined;
@@ -111,6 +130,10 @@ function writeAtomic(filePath, value) {
     if (descriptor !== undefined) fs.closeSync(descriptor);
     fs.rmSync(temporary, { force: true });
   }
+}
+
+function writeAtomic(filePath, value) {
+  writeFileAtomic(filePath, JSON.stringify(value, null, 2));
 }
 
 function createConfigStore(filePath, persist = writeAtomic) {
@@ -150,11 +173,12 @@ function createConfigStore(filePath, persist = writeAtomic) {
         for (const [id, change] of Object.entries(input.games)) {
           validateGameId(id);
           if (!change || typeof change !== 'object' || Array.isArray(change) ||
-            Object.keys(change).some((key) => !['gamePath', 'modsPath', 'launchArgs'].includes(key))) {
-            throw new Error('Only game and mods folders or launch options can be changed here.');
+            Object.keys(change).some((key) => !['gamePath', 'modsPath', 'launchArgs', 'tweaks'].includes(key))) {
+            throw new Error('Only game and mods folders, launch options, or gameplay tweaks can be changed here.');
           }
           for (const [field, value] of Object.entries(change)) {
             if (field === 'launchArgs') config.games[id].launchArgs = normalizeLaunchArgs(value);
+            else if (field === 'tweaks') config.games[id].tweaks = normalizeTweaks(id, value, config.games[id].tweaks);
             else config.games[id][field] = validatePath(value);
           }
         }
@@ -165,4 +189,4 @@ function createConfigStore(filePath, persist = writeAtomic) {
   return { read, update, patch };
 }
 
-module.exports = { createConfigStore, writeAtomic, profileName };
+module.exports = { createConfigStore, writeAtomic, writeFileAtomic, profileName };

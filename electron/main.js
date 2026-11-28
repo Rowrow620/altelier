@@ -12,6 +12,7 @@ const { createProfileService } = require('./library/profiles');
 const { createUpdateService } = require('./library/updates');
 const { createDiagnosticsService } = require('./library/diagnostics');
 const { createBackupService } = require('./library/backups');
+const { syncTweaks, hasActiveTweaks } = require('./library/tweaks');
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 const debugLogging = isDevelopment || process.argv.includes('--atelier-debug');
@@ -149,5 +150,5 @@ app.on('window-all-closed', () => {
 registerIpc({
   ipcMain, getWindow: () => mainWindow, rendererFile, devUrl,
   store, installer, gameService, library, profiles, checkUpdates, searchCatalog,
-  catalogFiles, downloadCatalogMod, diagnostics, backups, dialog, shell,
+  catalogFiles, downloadCatalogMod, diagnostics, backups, syncTweaks, hasActiveTweaks, dialog, shell,
 });
