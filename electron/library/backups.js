@@ -15,9 +15,10 @@ function defaultLocalLow() {
 
 function saveDirectoryForGame(gameId, localLowRoot = defaultLocalLow()) {
   const id = validateGameId(gameId);
-  return id === 'lobotomy'
-    ? path.join(localLowRoot, 'Project_Moon', 'Lobotomy')
-    : path.join(localLowRoot, 'Project_Moon', 'LibraryOfRuina');
+  const candidates = id === 'lobotomy'
+    ? [path.join(localLowRoot, 'Project_Moon', 'Lobotomy'), path.join(localLowRoot, 'Project Moon', 'Lobotomy')]
+    : [path.join(localLowRoot, 'Project Moon', 'LibraryOfRuina'), path.join(localLowRoot, 'Project_Moon', 'LibraryOfRuina')];
+  return candidates.find((dir) => existingStat(dir)?.isDirectory()) ?? candidates[0];
 }
 
 function copySafeTree(src, dst) {

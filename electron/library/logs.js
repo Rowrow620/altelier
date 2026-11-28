@@ -10,9 +10,23 @@ function defaultLocalLowRoot() {
   return path.join(os.homedir(), 'AppData', 'LocalLow');
 }
 
+function gameLogDirectory(gameId, localLowRoot = defaultLocalLowRoot()) {
+  const id = validateGameId(gameId);
+  const candidates = id === 'ruina'
+    ? [
+        path.join(localLowRoot, 'Project Moon', 'LibraryOfRuina'),
+        path.join(localLowRoot, 'Project_Moon', 'LibraryOfRuina'),
+      ]
+    : [
+        path.join(localLowRoot, 'Project_Moon', 'Lobotomy'),
+        path.join(localLowRoot, 'Project Moon', 'Lobotomy'),
+        path.join(localLowRoot, 'Project Moon', 'LobotomyCorp'),
+      ];
+  return candidates.find((dir) => existingStat(dir)?.isDirectory()) ?? candidates[0];
+}
+
 function gameLogPath(gameId, localLowRoot = defaultLocalLowRoot()) {
-  const folder = validateGameId(gameId) === 'ruina' ? 'LibraryOfRuina' : 'LobotomyCorp';
-  return path.join(localLowRoot, 'Project Moon', folder, 'Player.log');
+  return path.join(gameLogDirectory(gameId, localLowRoot), 'Player.log');
 }
 
 function readTailLines(filePath, maxBytes = MAX_LOG_TAIL_BYTES) {
@@ -35,8 +49,7 @@ function readTailLines(filePath, maxBytes = MAX_LOG_TAIL_BYTES) {
 
 function readGameLogs(gameId, { localLowRoot = defaultLocalLowRoot(), gamePath = '' } = {}) {
   const id = validateGameId(gameId);
-  const folder = id === 'ruina' ? 'LibraryOfRuina' : 'LobotomyCorp';
-  const baseDir = path.join(localLowRoot, 'Project Moon', folder);
+  const baseDir = gameLogDirectory(id, localLowRoot);
   const candidates = [
     { id: 'player', label: 'Player.log', logPath: path.join(baseDir, 'Player.log') },
     { id: 'player-prev', label: 'Player-prev.log', logPath: path.join(baseDir, 'Player-prev.log') },
