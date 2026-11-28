@@ -56,8 +56,8 @@ export function App() {
   const loadingMods = settings.loading || library.loading;
   const mods = loadingMods ? [] : library.mods;
   const selectedMod = mods.find((mod) => mod.id === selectedModId) ?? null;
-  const builtInTweaksEnabled = Boolean(currentGame.tweaks.SpeedMultiplier) || Object.values(currentGame.tweaks).includes(true);
-  const activeCount = mods.filter((mod) => mod.enabled).length + Number(builtInTweaksEnabled);
+  const builtInTweaksEnabled = Boolean(currentGame.tweaks?.SpeedMultiplier) || Object.values(currentGame.tweaks ?? {}).includes(true);
+  const activeCount = mods.filter((mod) => mod.enabled).length;
   const hasExternallyManagedMods = mods.some((mod) => mod.enabled === null);
   const gameLaunch = launch?.gameId === currentGame.id ? launch : null;
   const launchError = gameLaunch?.status === 'error' ? gameLaunch.message : null;
@@ -114,6 +114,7 @@ export function App() {
             }}
             onOpenFolder={() => library.openFolder()}
             activeCount={loadingMods || hasExternallyManagedMods ? undefined : activeCount}
+            tweaksActive={builtInTweaksEnabled}
             onLaunch={launchGame}
             launching={settings.loading || launch?.status === 'launching'}
           />

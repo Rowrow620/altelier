@@ -13,6 +13,7 @@ interface SidebarProps {
   onSelectTab: (tab: Tab) => void;
   onOpenFolder: () => void;
   activeCount?: number;
+  tweaksActive?: boolean;
   onLaunch: (modded: boolean) => void;
   launching: boolean;
 }
@@ -28,7 +29,7 @@ const navigation = [
 
 export function Sidebar({
   activeGameId, onSelectGame, games, activeTab, onSelectTab, onOpenFolder,
-  activeCount, onLaunch, launching,
+  activeCount, tweaksActive = false, onLaunch, launching,
 }: SidebarProps) {
   return (
     <aside className="flex w-72 shrink-0 flex-col gap-4 overflow-hidden border-r border-line bg-chrome p-4">
@@ -80,7 +81,9 @@ export function Sidebar({
           disabled={launching}
           className="font-norwester inline-flex min-h-10 w-full items-center justify-center rounded-md border border-emerald-500/40 bg-emerald-500/15 px-3 text-sm tracking-[0.08em] text-emerald-300 transition-colors hover:bg-emerald-500/25 disabled:opacity-45"
         >
-          Launch Modded{activeCount !== undefined && ' (' + activeCount + ')'}
+          Launch Modded{activeCount !== undefined
+            ? ` (${activeCount}${tweaksActive ? ' + Tweaks' : ''})`
+            : (tweaksActive ? ' (Tweaks)' : '')}
         </button>
         <button
           type="button"
