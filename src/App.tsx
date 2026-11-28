@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Header } from './components/Header';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar, type Tab } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
 import { BrowseOnlineView } from './components/BrowseOnlineView';
+import { TweaksView } from './components/TweaksView';
 import { OptimizationView } from './components/OptimizationView';
 import { InstallModal } from './components/InstallModal';
 import { SettingsModal } from './components/SettingsModal';
@@ -24,7 +25,7 @@ export function App() {
   const { config } = settings;
   const currentGame = config.games[config.activeGame];
   const library = useLibrary(currentGame, settings.loading);
-  const [activeTab, setActiveTab] = useState<'mods' | 'browse' | 'optimization' | 'settings'>('mods');
+  const [activeTab, setActiveTab] = useState<Tab>('mods');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedModId, setSelectedModId] = useState<string | null>(null);
   const [install, setInstall] = useState<{ gameId: GameId; replacement?: Mod } | null>(null);
@@ -44,6 +45,7 @@ export function App() {
     setLaunch({ gameId, status: 'launching', message: `Launching ${currentGame.name} (${mode})…` });
     try {
       if (!api) throw new Error('Open Atelier to launch a game.');
+      await settings.waitForPendingSave();
       const message = await api.launchGame(gameId, modded);
       setLaunch({ gameId, status: 'requested', message });
     } catch (cause) {
@@ -54,7 +56,8 @@ export function App() {
   const loadingMods = settings.loading || library.loading;
   const mods = loadingMods ? [] : library.mods;
   const selectedMod = mods.find((mod) => mod.id === selectedModId) ?? null;
-  const activeCount = mods.filter((mod) => mod.enabled).length;
+  const builtInTweaksEnabled = Boolean(currentGame.tweaks.SpeedMultiplier) || Object.values(currentGame.tweaks).includes(true);
+  const activeCount = mods.filter((mod) => mod.enabled).length + Number(builtInTweaksEnabled);
   const hasExternallyManagedMods = mods.some((mod) => mod.enabled === null);
   const gameLaunch = launch?.gameId === currentGame.id ? launch : null;
   const launchError = gameLaunch?.status === 'error' ? gameLaunch.message : null;
@@ -148,6 +151,12 @@ export function App() {
               gameId={currentGame.id}
               onInstalled={() => library.refreshMods(currentGame.id, false)}
             />
+          ) : activeTab === 'tweaks' ? (
+            <TweaksView
+              key={currentGame.id}
+              game={currentGame}
+              onSaveConfig={settings.saveConfig}
+            />
           ) : activeTab === 'optimization' ? (
             <OptimizationView
               key={currentGame.id}
@@ -170,8 +179,10 @@ export function App() {
       {selectedMod && (
         <ModDetailsModal
           key={currentGame.id + ':' + selectedMod.id}
+          gameId={currentGame.id}
           mod={selectedMod}
           onClose={() => setSelectedModId(null)}
+          onSaved={() => void library.refreshMods(currentGame.id, false)}
         />
       )}
 
