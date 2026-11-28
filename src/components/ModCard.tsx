@@ -5,6 +5,8 @@ import type { Mod, ModUpdate } from '../types';
 interface ModCardProps {
   mod: Mod;
   update?: ModUpdate;
+  selected?: boolean;
+  onSelectChange?: (modId: string, selected: boolean) => void;
   onToggle: (modId: string, current: boolean) => void;
   onOpenFolder: (modId: string) => void;
   onDelete: (modId: string) => void;
@@ -13,13 +15,26 @@ interface ModCardProps {
 
 const iconButton = 'grid size-7 place-items-center rounded border border-transparent text-muted transition-colors hover:border-line hover:bg-white/[0.06] hover:text-white';
 
-export function ModCard({ mod, update, onToggle, onOpenFolder, onDelete, onViewDetails }: ModCardProps) {
+export function ModCard({ mod, update, selected = false, onSelectChange, onToggle, onOpenFolder, onDelete, onViewDetails }: ModCardProps) {
   const reference = mod.source === 'workshop' ? mod.id : mod.folderName;
   const sourceUrl = mod.workshopUrl || (update?.status === 'available' ? mod.nexusUrl + '?tab=files' : mod.nexusUrl);
   const sourceLabel = mod.source === 'workshop' ? 'Steam Workshop' : 'Nexus Mods';
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-white/[0.03] md:grid md:grid-cols-[100px_minmax(180px,1fr)_140px_92px_168px_96px]">
+    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-white/[0.03] md:grid md:grid-cols-[28px_100px_minmax(180px,1fr)_140px_92px_168px_96px]">
+      <div className="flex items-center justify-center">
+        {mod.source !== 'workshop' && onSelectChange ? (
+          <input
+            type="checkbox"
+            checked={selected}
+            aria-label={`Select ${mod.name}`}
+            onChange={(e) => onSelectChange(mod.id, e.target.checked)}
+            className="size-3.5 accent-[var(--color-accent)]"
+          />
+        ) : (
+          <span className="size-3.5" aria-hidden="true" />
+        )}
+      </div>
       <div className="flex md:justify-center">
         {mod.enabled !== null ? (
           <EnabledButton name={mod.name} enabled={mod.enabled} onToggle={() => onToggle(mod.id, mod.enabled)} />

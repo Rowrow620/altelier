@@ -29,6 +29,7 @@ export function DashboardView({
   const [updateReport, setUpdateReport] = useState<{ mods: Mod[]; results: UpdateResults } | null>(null);
   const [checking, setChecking] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [updateError, setUpdateError] = useState('');
   const query = search.trim().toLowerCase();
   const categories = [...new Set(mods.map((mod) => mod.category))].sort((left, right) => left.localeCompare(right));
@@ -161,48 +162,118 @@ export function DashboardView({
 
         {!loading && (matchingMods.length > 0 ? (
           <div className="mt-4 overflow-hidden rounded-md border border-line bg-panel">
-            <div className="hidden grid-cols-[100px_minmax(180px,1fr)_140px_92px_168px_96px] items-center gap-3 border-b border-line bg-chrome px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted md:grid">
-              <button
-                type="button"
-                onClick={() => toggleSort('status')}
-                className="flex items-center justify-center gap-1 transition-colors hover:text-white"
-              >
-                <span>Status</span>
-                {sortBy === 'status' && <SortIcon size={12} aria-hidden="true" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleSort('name')}
-                className="flex items-center gap-1 text-left transition-colors hover:text-white"
-              >
-                <span>Mod Name</span>
-                {sortBy === 'name' && <SortIcon size={12} aria-hidden="true" />}
-              </button>
-              <span>Author</span>
-              <span>Version</span>
-              <button
-                type="button"
-                onClick={() => toggleSort('category')}
-                className="flex items-center gap-1 text-left transition-colors hover:text-white"
-              >
-                <span>Category</span>
-                {sortBy === 'category' && <SortIcon size={12} aria-hidden="true" />}
-              </button>
-              <span className="sr-only">Actions</span>
-            </div>
-            <div className="max-h-[480px] divide-y divide-line overflow-y-auto">
-              {(expanded ? matchingMods : matchingMods.slice(0, 10)).map((mod) => (
-                <ModCard
-                  key={mod.id}
-                  mod={mod}
-                  update={currentChecks.find((item) => item.modId === mod.id)}
-                  onToggle={onToggleMod}
-                  onOpenFolder={onOpenFolder}
-                  onDelete={onDeleteMod}
-                  onViewDetails={onViewDetails}
-                />
-              ))}
-            </div>
+            {(() => {
+              const visibleMods = expanded ? matchingMods : matchingMods.slice(0, 10);
+              const selectableVisible = visibleMods.filter((mod) => mod.source !== 'workshop');
+              const selectedSet = new Set(selectedIds);
+              const allVisibleSelected = selectableVisible.length > 0 && selectableVisible.every((mod) => selectedSet.has(mod.id));
+              const selectedMods = mods.filter((mod) => mod.source !== 'workshop' && selectedSet.has(mod.id));
+              return (
+                <>
+                  {selectedMods.length > 0 && (
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-field px-4 py-2 text-xs">
+                      <span className="font-medium text-white">{selectedMods.length} selected</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            for (const mod of selectedMods) {
+                              if (mod.enabled === false) await onToggleMod(mod.id, false);
+                            }
+                            setSelectedIds([]);
+                          }}
+                          className="ui-button h-7 min-h-7 text-xs"
+                        >
+                          Enable selected
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            for (const mod of selectedMods) {
+                              if (mod.enabled === true) await onToggleMod(mod.id, true);
+                            }
+                            setSelectedIds([]);
+                          }}
+                          className="ui-button h-7 min-h-7 text-xs"
+                        >
+                          Disable selected
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedIds([])}
+                          className="text-muted hover:text-white"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  <div className="hidden grid-cols-[28px_100px_minmax(180px,1fr)_140px_92px_168px_96px] items-center gap-3 border-b border-line bg-chrome px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted md:grid">
+                    <div className="flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={allVisibleSelected}
+                        disabled={selectableVisible.length === 0}
+                        aria-label="Select all visible local mods"
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds((prev) => [...new Set([...prev, ...selectableVisible.map((m) => m.id)])]);
+                          } else {
+                            const visibleSet = new Set(selectableVisible.map((m) => m.id));
+                            setSelectedIds((prev) => prev.filter((id) => !visibleSet.has(id)));
+                          }
+                        }}
+                        className="size-3.5 accent-[var(--color-accent)]"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('status')}
+                      className="flex items-center justify-center gap-1 transition-colors hover:text-white"
+                    >
+                      <span>Status</span>
+                      {sortBy === 'status' && <SortIcon size={12} aria-hidden="true" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('name')}
+                      className="flex items-center gap-1 text-left transition-colors hover:text-white"
+                    >
+                      <span>Mod Name</span>
+                      {sortBy === 'name' && <SortIcon size={12} aria-hidden="true" />}
+                    </button>
+                    <span>Author</span>
+                    <span>Version</span>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('category')}
+                      className="flex items-center gap-1 text-left transition-colors hover:text-white"
+                    >
+                      <span>Category</span>
+                      {sortBy === 'category' && <SortIcon size={12} aria-hidden="true" />}
+                    </button>
+                    <span className="sr-only">Actions</span>
+                  </div>
+                  <div className="max-h-[480px] divide-y divide-line overflow-y-auto">
+                    {visibleMods.map((mod) => (
+                      <ModCard
+                        key={mod.id}
+                        mod={mod}
+                        update={currentChecks.find((item) => item.modId === mod.id)}
+                        selected={selectedSet.has(mod.id)}
+                        onSelectChange={(modId, next) => {
+                          setSelectedIds((prev) => next ? [...new Set([...prev, modId])] : prev.filter((id) => id !== modId));
+                        }}
+                        onToggle={onToggleMod}
+                        onOpenFolder={onOpenFolder}
+                        onDelete={onDeleteMod}
+                        onViewDetails={onViewDetails}
+                      />
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
             {matchingMods.length > 10 && (
               <div className="flex items-center justify-between border-t border-line bg-chrome/60 px-4 py-2 text-xs text-muted">
                 <span>
