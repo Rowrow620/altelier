@@ -77,7 +77,7 @@ function listDirectories(root) {
     .filter((entry) => entry.isDirectory() && !entry.isSymbolicLink());
 }
 
-function createDiagnosticsService({ store, installer }) {
+function createDiagnosticsService({ store, installer, workshopDirectories }) {
   function analyze(gameId) {
     const id = validateGameId(gameId);
     const game = store.read().games[id];
@@ -145,7 +145,7 @@ function createDiagnosticsService({ store, installer }) {
       .slice(0, 100);
 
     const baseMod = detectBaseModInfo(game);
-    const compatibility = scanCompatibility(game);
+    const compatibility = scanCompatibility(game, { workshopDirectories });
 
     return {
       gameId: id,

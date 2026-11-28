@@ -310,3 +310,23 @@ test('loadOrder reads, validates, and writes Lobotomy load order XML securely', 
   assert.deepEqual(loadOrder.get('lobotomy').orders, ['ModB', 'ModA']);
   assert.throws(() => loadOrder.save('lobotomy', ['bad<id>']), /Invalid mod ID/);
 });
+
+test('diagnostics detects duplicate local copy of Workshop mod and removes it safely', (t) => {
+  const { dir, write, store, installer } = setup(t);
+  const ruinaDir = path.dirname(write('Ruina/LibraryOfRuina.exe'));
+  write('Ruina/LibraryOfRuina_Data/Mods/2673646927/StageModInfo.xml', '<Workshop><Title>NoGrind</Title></Workshop>');
+  const workshopDir = path.dirname(write('Workshop/2673646927/StageModInfo.xml', '<Workshop><Title>NoGrind</Title></Workshop>'));
+  store.patch({ activeGame: 'ruina', games: { ruina: { gamePath: ruinaDir } } });
+
+  const diag = createDiagnosticsService({
+    store,
+    installer,
+    workshopDirectories: () => [workshopDir],
+  });
+  const pre = diag.analyze('ruina');
+  assert(pre.compatibility.some((c) => c.id === 'duplicate-local:2673646927' && c.fixable));
+
+  const post = diag.fixIssue('ruina', 'duplicate-local:2673646927');
+  assert(!post.compatibility.some((c) => c.id === 'duplicate-local:2673646927'));
+  assert.equal(fs.existsSync(path.join(ruinaDir, 'LibraryOfRuina_Data/Mods/2673646927')), false);
+});

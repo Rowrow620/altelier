@@ -179,25 +179,48 @@ function detectNestedModSubfolder(folder) {
   return '';
 }
 
-function scanCompatibility(game) {
+function scanCompatibility(game, { workshopDirectories } = {}) {
   const items = [];
   const directory = getModsDirectory(game);
   const root = directory && existingStat(directory)?.isDirectory() ? modsRoot(directory) : '';
   const inactive = root ? inactiveDirectory(root) : '';
+  const workshopIds = new Set();
+  const workshopTitles = new Set();
+
+  if (game.id === 'ruina' && typeof workshopDirectories === 'function') {
+    for (const dir of workshopDirectories(game) ?? []) {
+      const folderId = path.basename(dir);
+      if (folderId) workshopIds.add(folderId.toLowerCase());
+      const xml = readSmallFile(path.join(dir, 'StageModInfo.xml'), 16 * 1024)?.toString('utf8') ?? '';
+      const title = xml.match(/<Title>([^<]+)<\/Title>/i)?.[1]?.trim();
+      if (title) workshopTitles.add(title.toLowerCase());
+    }
+  }
 
   for (const container of [root, inactive].filter(Boolean)) {
     for (const entry of listEntries(container)) {
       if (!entry.isDirectory() || entry.name.startsWith('.atelier-')) continue;
       const full = path.join(container, entry.name);
+      const cleanName = stableName(entry.name);
       const nested = detectNestedModSubfolder(full);
       if (nested) {
         items.push({
           id: `unwrap:${entry.name}`,
-          modName: stableName(entry.name),
+          modName: cleanName,
           severity: 'warning',
           message: `"${entry.name}" is double-nested inside "${nested}/", which loaders skip.`,
           fixable: true,
           fixLabel: 'Unwrap folder',
+        });
+      }
+      if (game.id === 'ruina' && (workshopIds.has(cleanName.toLowerCase()) || workshopTitles.has(cleanName.toLowerCase()))) {
+        items.push({
+          id: `duplicate-local:${cleanName}`,
+          modName: cleanName,
+          severity: 'warning',
+          message: `"${cleanName}" duplicates an installed Steam Workshop mod.`,
+          fixable: true,
+          fixLabel: 'Remove local copy',
         });
       }
     }
@@ -252,6 +275,11 @@ function fixCompatibilityIssue({ store, installer, gameId, issueId }) {
 
   const target = installer.folder(id, rawModName);
   assertSafeTree(target);
+
+  if (action === 'duplicate-local') {
+    installer.deleteMod(id, rawModName);
+    return;
+  }
 
   if (action === 'unwrap') {
     const nested = detectNestedModSubfolder(target);
