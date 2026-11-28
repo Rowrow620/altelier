@@ -272,6 +272,7 @@ export interface AtelierApi {
   getSaveBackups: (gameId: GameId) => Promise<SaveBackupsState>;
   createSaveBackup: (gameId: GameId, label?: string) => Promise<SaveBackupsState>;
   restoreSaveBackup: (gameId: GameId, backupId: string) => Promise<SaveBackupsState>;
+  deleteSaveBackup: (gameId: GameId, backupId: string) => Promise<SaveBackupsState>;
   getLoadOrder: (gameId: GameId) => Promise<LoadOrderState>;
   saveLoadOrder: (gameId: GameId, orders: string[]) => Promise<LoadOrderState>;
   getGameLogs: (gameId: GameId) => Promise<GameLogState>;

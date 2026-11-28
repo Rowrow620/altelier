@@ -6,6 +6,7 @@ interface BackupsPanelProps {
   formatBytes: (bytes: number) => string;
   onCreateBackup: () => void;
   onRestoreBackup: (backupId: string) => void;
+  onDeleteBackup: (backupId: string) => void;
 }
 
 export function BackupsPanel({
@@ -14,6 +15,7 @@ export function BackupsPanel({
   formatBytes,
   onCreateBackup,
   onRestoreBackup,
+  onDeleteBackup,
 }: BackupsPanelProps) {
   return (
     <div id="opt-panel-backups" role="tabpanel" aria-labelledby="opt-tab-backups" className="space-y-4">
@@ -57,14 +59,24 @@ export function BackupsPanel({
                   {backup.fileCount} files · {formatBytes(backup.totalBytes)}
                 </div>
               </div>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => onRestoreBackup(backup.id)}
-                className="ui-button h-8 min-h-8 text-xs"
-              >
-                Restore
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onRestoreBackup(backup.id)}
+                  className="ui-button h-8 min-h-8 text-xs"
+                >
+                  Restore
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onDeleteBackup(backup.id)}
+                  className="ui-button h-8 min-h-8 text-xs text-rose-200 hover:border-rose-500/40"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
         </div>

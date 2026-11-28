@@ -137,7 +137,20 @@ function createBackupService({ backupsRoot, localLowRoot = defaultLocalLow() }) 
     return list(id);
   }
 
-  return { list, create, restore };
+  function remove(gameId, backupId) {
+    const id = validateGameId(gameId);
+    if (typeof backupId !== 'string' || !/^[A-Za-z0-9_-]{8,80}$/.test(backupId)) {
+      throw new Error('Invalid save backup selection.');
+    }
+    const targetDir = path.join(gameBackupRoot(id), backupId);
+    if (!existingStat(targetDir)?.isDirectory()) {
+      throw new Error('Selected save backup could not be found.');
+    }
+    fs.rmSync(targetDir, { recursive: true, force: true });
+    return list(id);
+  }
+
+  return { list, create, restore, remove };
 }
 
 module.exports = { createBackupService, saveDirectoryForGame };

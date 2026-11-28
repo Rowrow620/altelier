@@ -228,6 +228,8 @@ test('Ruina BaseMods migration, save backups, and profile JSON import', (t) => {
   const afterRestore = backups.restore('ruina', created.backups[0].id);
   assert.equal(afterRestore.backups.length, 2); // includes automatic "Before restore" snapshot
   assert.equal(fs.readFileSync(path.join(localLow, 'Project_Moon/LibraryOfRuina/save.dat'), 'utf8'), 'original-save');
+  const afterDelete = backups.remove('ruina', created.backups[0].id);
+  assert.equal(afterDelete.backups.length, 1);
 });
 
 test('tweaks config validation, deployment sync, and Ruina loader status', (t) => {

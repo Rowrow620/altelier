@@ -69,6 +69,19 @@ function registerSystemIpc({
     if (decision.response !== 1) return backups.list(input?.gameId);
     return backups.restore(input?.gameId, input?.backupId);
   });
+  handle('backups:delete', async (input) => {
+    const decision = await dialog.showMessageBox(getWindow(), {
+      type: 'warning',
+      title: 'Delete save backup?',
+      message: 'Delete this save backup permanently?',
+      buttons: ['Cancel', 'Delete'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    });
+    if (decision.response !== 1) return backups.list(input?.gameId);
+    return backups.remove(input?.gameId, input?.backupId);
+  });
   handle('load-order:get', (gameId) => loadOrder.get(gameId));
   handle('load-order:save', (input) => loadOrder.save(input?.gameId, input?.orders));
   handle('logs:get', (gameId) => readGameLogs(gameId, { gamePath: store.read().games[validateGameId(gameId)]?.gamePath }));

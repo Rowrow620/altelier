@@ -157,6 +157,22 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
     }
   }
 
+  async function deleteBackup(backupId: string) {
+    const api = window.atelierApi;
+    if (!api || busy) return;
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      setBackupsState(await api.deleteSaveBackup(game.id, backupId));
+      setNotice('Save backup deleted.');
+    } catch (cause) {
+      setError(errorMessage(cause, 'Could not delete save backup.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function moveLoadOrder(index: number, delta: -1 | 1) {
     const api = window.atelierApi;
     if (!api || busy || !loadOrderState) return;
@@ -392,6 +408,7 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
             formatBytes={formatBytes}
             onCreateBackup={() => void createBackup()}
             onRestoreBackup={(id) => void restoreBackup(id)}
+            onDeleteBackup={(id) => void deleteBackup(id)}
           />
         )}
         {subTab === 'logs' && (

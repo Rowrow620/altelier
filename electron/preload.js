@@ -41,6 +41,7 @@ const atelierApi = {
   getSaveBackups: (gameId) => ipcRenderer.invoke('backups:list', gameId),
   createSaveBackup: (gameId, label) => ipcRenderer.invoke('backups:create', { gameId, label }),
   restoreSaveBackup: (gameId, backupId) => ipcRenderer.invoke('backups:restore', { gameId, backupId }),
+  deleteSaveBackup: (gameId, backupId) => ipcRenderer.invoke('backups:delete', { gameId, backupId }),
   getLoadOrder: (gameId) => ipcRenderer.invoke('load-order:get', gameId),
   saveLoadOrder: (gameId, orders) => ipcRenderer.invoke('load-order:save', { gameId, orders }),
   getGameLogs: (gameId) => ipcRenderer.invoke('logs:get', gameId),
