@@ -189,6 +189,12 @@ function createInstallService({ store, getGameModsDir, activation = () => 'setti
         wasEnabled: store.read().games[gameId].enabledModIds.includes(modId),
         committed: false,
       };
+      if (hadTarget) {
+        const backupDir = path.join(primary, '.atelier-mod-backups', modId);
+        fs.rmSync(backupDir, { recursive: true, force: true });
+        fs.mkdirSync(path.dirname(backupDir), { recursive: true });
+        fs.cpSync(target, backupDir, { recursive: true, dereference: false });
+      }
       writeAtomic(path.join(transaction, 'journal.json'), record);
       commit(root, transaction, record, primary);
       return warnings.length ? { success: true, modId, warnings } : { success: true, modId };

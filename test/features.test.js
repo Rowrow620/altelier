@@ -392,4 +392,47 @@ test('opt-in appUpdate validates release URLs and readGameLogs flags errors safe
 
   store.patch({ games: { ruina: { tweaks: { NoGrindAmount: 999, KeyPageLimit: 99 } } } });
   assert.equal(store.read().games.ruina.tweaks.NoGrindAmount, 999);
+
+  // C# plugin source & project integrity check for CI
+  for (const [csRel, marker] of [
+    ['plugins/ruina/AtelierTweaks.cs', 'class Initializer : ModInitializer'],
+    ['plugins/lobotomy/AtelierLobotomyTweaks.cs', 'class Harmony_Patch'],
+  ]) {
+    const src = fs.readFileSync(path.join(__dirname, '..', csRel), 'utf8');
+    assert(src.includes(marker));
+    assert(!src.includes('ModDebug'));
+    const opens = (src.match(/\{/g) ?? []).length;
+    const closes = (src.match(/\}/g) ?? []).length;
+    assert.equal(opens, closes);
+  }
+});
+
+test('per-mod backup snapshots previous copy on replace and profiles.previewActivation shows diff', async (t) => {
+  const { dir, write, store, installer, profiles } = setup(t);
+  const lobDir = path.dirname(write('LobModBackup/LobotomyCorp.exe'));
+  write('LobModBackup/LobotomyCorp_Data/Managed/LobotomyBaseModLib.dll');
+  write('LobModBackup/LobotomyCorp_Data/BaseMods/SampleMod/Info.txt', 'Name: SampleMod\n');
+  write('LobModBackup/LobotomyCorp_Data/BaseMods/SampleMod/old.txt', 'v1-data');
+  store.patch({ games: { lobotomy: { gamePath: lobDir } } });
+
+  const AdmZip = require('adm-zip');
+  const z = new AdmZip();
+  z.addFile('SampleMod/Info.txt', Buffer.from('Name: SampleMod\n'));
+  z.addFile('SampleMod/new.txt', Buffer.from('v2-data'));
+  const zipPath = path.join(dir, 'SampleMod.zip');
+  z.writeZip(zipPath);
+
+  const installed = await installer.install('lobotomy', zipPath);
+  assert.equal(installed.success, true);
+  assert.equal(
+    fs.readFileSync(path.join(lobDir, 'LobotomyCorp_Data/BaseMods/.atelier-mod-backups/SampleMod/old.txt'), 'utf8'),
+    'v1-data',
+  );
+
+  store.patch({ games: { lobotomy: { tweaks: { UnlimitedLob: true } } } });
+  profiles.save('CheatRun', 'lobotomy');
+  store.patch({ games: { lobotomy: { tweaks: { UnlimitedLob: false } } } });
+  profiles.save('Default', 'lobotomy');
+  const diff = profiles.previewActivation('CheatRun', 'lobotomy');
+  assert(diff.tweakChanges.includes('UnlimitedLob: false -> true'));
 });
