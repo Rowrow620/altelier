@@ -33,26 +33,37 @@ function readTailLines(filePath, maxBytes = MAX_LOG_TAIL_BYTES) {
   return lines.slice(-MAX_LINES);
 }
 
-function readGameLogs(gameId, { localLowRoot = defaultLocalLowRoot() } = {}) {
+function readGameLogs(gameId, { localLowRoot = defaultLocalLowRoot(), gamePath = '' } = {}) {
   const id = validateGameId(gameId);
-  const logPath = gameLogPath(id, localLowRoot);
-  const lines = readTailLines(logPath);
-  if (!lines) {
-    return {
-      gameId: id,
-      logPath,
-      exists: false,
-      lines: [],
-      errorCount: 0,
-    };
+  const folder = id === 'ruina' ? 'LibraryOfRuina' : 'LobotomyCorp';
+  const baseDir = path.join(localLowRoot, 'Project Moon', folder);
+  const candidates = [
+    { id: 'player', label: 'Player.log', logPath: path.join(baseDir, 'Player.log') },
+    { id: 'player-prev', label: 'Player-prev.log', logPath: path.join(baseDir, 'Player-prev.log') },
+  ];
+  if (id === 'lobotomy' && gamePath) {
+    candidates.push({
+      id: 'basemod',
+      label: 'BaseModLog.txt',
+      logPath: path.join(gamePath, 'LobotomyCorp_Data', 'Managed', 'BaseMod', 'BaseModLog.txt'),
+    });
   }
-  const errorLines = lines.filter((line) => /\b(error|fail)\b|exception/i.test(line));
+  const sources = candidates.map((entry) => {
+    const lines = readTailLines(entry.logPath);
+    if (!lines) {
+      return { ...entry, exists: false, lines: [], errorCount: 0 };
+    }
+    const errorCount = lines.filter((line) => /\b(error|fail)\b|exception/i.test(line)).length;
+    return { ...entry, exists: true, lines, errorCount };
+  });
+  const primary = sources[0];
   return {
     gameId: id,
-    logPath,
-    exists: true,
-    lines,
-    errorCount: errorLines.length,
+    logPath: primary.logPath,
+    exists: primary.exists,
+    lines: primary.lines,
+    errorCount: primary.errorCount,
+    sources,
   };
 }
 

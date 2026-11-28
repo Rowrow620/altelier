@@ -81,6 +81,13 @@ export function useLibrary(game: GameConfig, configLoading: boolean) {
     if (api) void run(game.id, () => api.deleteMod(game.id, folderName), 'Could not delete the mod.');
   }
 
+  function deleteMods(folderNames: string[]) {
+    const api = window.atelierApi;
+    if (api && folderNames.length) {
+      void run(game.id, () => api.deleteMods(game.id, folderNames), 'Could not delete the selected mods.');
+    }
+  }
+
   function openFolder(folderName?: string) {
     const api = window.atelierApi;
     if (api) void run(game.id, async () => {
@@ -91,7 +98,7 @@ export function useLibrary(game: GameConfig, configLoading: boolean) {
 
   return {
     ...(libraries[game.id] ?? EMPTY_LIBRARY),
-    refreshMods, toggleMod, toggleAll, deleteMod, openFolder,
+    refreshMods, toggleMod, toggleAll, deleteMod, deleteMods, openFolder,
     dismissError: () => update(game.id, { error: null }),
   };
 }

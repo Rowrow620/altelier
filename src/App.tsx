@@ -142,6 +142,7 @@ export function App() {
               onToggleAll={library.toggleAll}
               onOpenFolder={library.openFolder}
               onDeleteMod={library.deleteMod}
+              onDeleteMods={library.deleteMods}
               onViewDetails={(mod) => setSelectedModId(mod.id)}
               onImport={() => setInstall({ gameId: currentGame.id })}
             />

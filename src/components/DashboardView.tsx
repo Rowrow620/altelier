@@ -12,6 +12,7 @@ interface DashboardViewProps {
   onToggleAll: (enable: boolean) => void;
   onOpenFolder: (modId?: string) => void;
   onDeleteMod: (modId: string) => void;
+  onDeleteMods?: (modIds: string[]) => void;
   onViewDetails: (mod: Mod) => void;
   onImport: () => void;
 }
@@ -19,7 +20,7 @@ interface DashboardViewProps {
 type SortKey = 'name' | 'status' | 'category';
 
 export function DashboardView({
-  gameId, mods, loading, onToggleMod, onToggleAll, onOpenFolder, onDeleteMod, onViewDetails, onImport,
+  gameId, mods, loading, onToggleMod, onToggleAll, onOpenFolder, onDeleteMod, onDeleteMods, onViewDetails, onImport,
 }: DashboardViewProps) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
@@ -198,6 +199,18 @@ export function DashboardView({
                         >
                           Disable selected
                         </button>
+                        {onDeleteMods && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onDeleteMods(selectedMods.map((mod) => mod.folderName));
+                              setSelectedIds([]);
+                            }}
+                            className="ui-button h-7 min-h-7 text-xs text-rose-200 hover:border-rose-500/40"
+                          >
+                            Delete selected
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => setSelectedIds([])}
