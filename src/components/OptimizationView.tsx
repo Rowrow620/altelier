@@ -2,15 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   AlertTriangle,
   Archive,
+  ArrowDown,
+  ArrowUp,
   CheckCircle2,
   ExternalLink,
+  ListOrdered,
   RotateCw,
   SlidersHorizontal,
   Trash2,
   Wrench,
 } from 'lucide-react';
 import { errorMessage } from '../errors';
-import type { ConfigPatch, GameConfig, GameDiagnostics, SaveBackupsState } from '../types';
+import type { ConfigPatch, GameConfig, GameDiagnostics, LoadOrderState, SaveBackupsState } from '../types';
 
 interface OptimizationViewProps {
   game: GameConfig;
@@ -18,7 +21,7 @@ interface OptimizationViewProps {
   onLibraryChanged: () => void;
 }
 
-type OptimizationTab = 'diagnostics' | 'backups' | 'launch';
+type OptimizationTab = 'diagnostics' | 'load-order' | 'backups' | 'launch';
 
 const UNITY_FLAGS = [
   { flag: '-popupwindow', label: 'Borderless window (-popupwindow)', description: 'Runs the game in a borderless window when windowed mode is selected.' },
@@ -36,6 +39,7 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
   const [subTab, setSubTab] = useState<OptimizationTab>('diagnostics');
   const [data, setData] = useState<GameDiagnostics | null>(null);
   const [backupsState, setBackupsState] = useState<SaveBackupsState | null>(null);
+  const [loadOrderState, setLoadOrderState] = useState<LoadOrderState | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -50,12 +54,14 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
     setLoading(true);
     setError('');
     try {
-      const [diag, saves] = await Promise.all([
+      const [diag, saves, order] = await Promise.all([
         api.getDiagnostics(game.id),
         api.getSaveBackups(game.id),
+        api.getLoadOrder(game.id),
       ]);
       setData(diag);
       setBackupsState(saves);
+      setLoadOrderState(order);
     } catch (cause) {
       setError(errorMessage(cause, 'Could not scan game diagnostics.'));
     } finally {
@@ -147,12 +153,34 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
     }
   }
 
+  async function moveLoadOrder(index: number, delta: -1 | 1) {
+    const api = window.atelierApi;
+    if (!api || busy || !loadOrderState) return;
+    const nextIndex = index + delta;
+    if (nextIndex < 0 || nextIndex >= loadOrderState.orders.length) return;
+    const reordered = [...loadOrderState.orders];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(nextIndex, 0, moved);
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      setLoadOrderState(await api.saveLoadOrder(game.id, reordered));
+      setNotice('Load order updated.');
+    } catch (cause) {
+      setError(errorMessage(cause, 'Could not update load order.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const diagnosticCount = data ? data.compatibility.length + data.conflicts.length : 0;
   const backupCount = backupsState?.backups.length ?? 0;
   const activeFlagCount = (game.launchArgs ?? []).length;
 
   const tabs: { id: OptimizationTab; label: string; Icon: typeof Wrench; badge?: number }[] = [
     { id: 'diagnostics', label: 'Diagnostics', Icon: Wrench, badge: diagnosticCount },
+    { id: 'load-order', label: 'Load Order', Icon: ListOrdered, badge: loadOrderState?.orders.length || undefined },
     { id: 'backups', label: 'Save Backups', Icon: Archive, badge: backupCount },
     { id: 'launch', label: 'Launch Options', Icon: SlidersHorizontal, badge: activeFlagCount || undefined },
   ];
@@ -375,6 +403,59 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
                 </div>
               )}
             </section>
+          </div>
+        )}
+
+        {subTab === 'load-order' && (
+          <div id="opt-panel-load-order" role="tabpanel" aria-labelledby="opt-tab-load-order" className="space-y-4">
+            <div className="rounded-md border border-line bg-panel px-4 py-3 text-xs text-muted">
+              Mods load from top to bottom. Later entries override earlier patches when modifying the same methods.
+            </div>
+            {!loadOrderState ? (
+              <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm text-muted">Reading load order…</div>
+            ) : !loadOrderState.available || loadOrderState.orders.length === 0 ? (
+              <div className="rounded-md border border-line bg-panel px-4 py-3 text-xs text-muted">
+                {game.id === 'ruina'
+                  ? 'No load order saved yet. Launch Library of Ruina with -mod once to initialize ModSetting.save.'
+                  : 'No BaseModList_v2.xml load order entries found yet.'}
+              </div>
+            ) : (
+              <div className="divide-y divide-line overflow-hidden rounded-md border border-line bg-panel">
+                {loadOrderState.orders.map((modId, index) => (
+                  <div key={modId} className="flex items-center justify-between gap-4 px-4 py-2.5 text-xs transition-colors hover:bg-white/[0.02]">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="w-6 shrink-0 font-mono text-muted tabular-nums">{index + 1}.</span>
+                      <span className="truncate font-mono text-stone-200">{modId}</span>
+                      {loadOrderState.activeIds.includes(modId) && (
+                        <span className="rounded border border-emerald-500/40 bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] text-emerald-300">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        aria-label={`Move ${modId} up`}
+                        disabled={busy || index === 0}
+                        onClick={() => void moveLoadOrder(index, -1)}
+                        className="ui-button h-7 min-h-7 px-2 text-xs disabled:opacity-35"
+                      >
+                        <ArrowUp size={13} aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Move ${modId} down`}
+                        disabled={busy || index === loadOrderState.orders.length - 1}
+                        onClick={() => void moveLoadOrder(index, 1)}
+                        className="ui-button h-7 min-h-7 px-2 text-xs disabled:opacity-35"
+                      >
+                        <ArrowDown size={13} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
