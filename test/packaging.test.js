@@ -34,7 +34,10 @@ test('all modal dialogs use native <dialog> without blocking browser dialogs', (
 test('preload API keys match shared AtelierApi contract and IPC handlers', () => {
   const preload = fs.readFileSync(path.join(root, 'electron', 'preload.js'), 'utf8');
   const contracts = fs.readFileSync(path.join(root, 'shared', 'contracts.ts'), 'utf8').replace(/\r\n/g, '\n');
-  const ipcRegister = fs.readFileSync(path.join(root, 'electron', 'ipc', 'register.js'), 'utf8');
+  const ipcRegister = fs.readdirSync(path.join(root, 'electron', 'ipc'))
+    .filter((file) => file.endsWith('.js'))
+    .map((file) => fs.readFileSync(path.join(root, 'electron', 'ipc', file), 'utf8'))
+    .join('\n');
 
   const apiBlockMatch = contracts.match(/export interface AtelierApi \{([\s\S]*?)\n\}/);
   assert.ok(apiBlockMatch, 'AtelierApi interface must exist in shared/contracts.ts');

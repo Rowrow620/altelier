@@ -1,7 +1,8 @@
-const fs = require('node:fs');
 const path = require('node:path');
 const { fileURLToPath } = require('node:url');
-const { validateGameId, validateName } = require('../files/paths');
+const { registerModIpc } = require('./mods');
+const { registerProfileIpc } = require('./profiles');
+const { registerSystemIpc } = require('./system');
 
 function trustedSender(event, window, rendererFile, devUrl) {
   if (!window || window.isDestroyed() || event.sender !== window.webContents ||
@@ -17,23 +18,35 @@ function trustedSender(event, window, rendererFile, devUrl) {
   }
 }
 
-function externalUrl(value) {
-  if (typeof value !== 'string' || value.length > 4096) throw new Error('Invalid link.');
-  const url = new URL(value);
-  const nexus = ['www.nexusmods.com', 'nexusmods.com'].includes(url.hostname);
-  const workshop = url.hostname === 'steamcommunity.com' && url.pathname === '/sharedfiles/filedetails/' &&
-    /^\?id=\d{1,20}$/.test(url.search) && !url.hash;
-  const github = url.hostname === 'github.com' && /^\/Rowrow620\/altelier\/?$/.test(url.pathname) &&
-    !url.search && !url.hash;
-  if (url.protocol !== 'https:' || url.username || url.password || url.port || (!nexus && !workshop && !github)) {
-    throw new Error('Only Nexus Mods, Steam Workshop, and the Atelier GitHub links can be opened here.');
+function externalUrl(rawUrl) {
+  let url;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error('Invalid external link.');
   }
-  return url.href;
+  if (url.protocol !== 'https:' || url.username || url.password || url.port) {
+    throw new Error('Blocked external link.');
+  }
+  const host = url.hostname.toLowerCase();
+  if (host === 'nexusmods.com' || host.endsWith('.nexusmods.com')) {
+    return url.toString();
+  }
+  if (host === 'github.com' && (url.pathname === '/Rowrow620/altelier' || url.pathname.startsWith('/Rowrow620/altelier/'))) {
+    return url.toString();
+  }
+  if (host === 'steamcommunity.com' && url.pathname === '/sharedfiles/filedetails/' &&
+      url.searchParams.size === 1 && /^\d{1,20}$/.test(url.searchParams.get('id') ?? '')) {
+    return url.toString();
+  }
+  throw new Error('Blocked untrusted external host.');
 }
 
 function registerIpc({
-  ipcMain, getWindow, rendererFile, devUrl, store, installer,
-  gameService, library, profiles, checkUpdates, searchCatalog, catalogFiles, downloadCatalogMod, diagnostics, backups, loadOrder, readGameLogs, checkAppUpdate, syncTweaks, hasActiveTweaks, dialog, shell,
+  ipcMain, getWindow, rendererFile, devUrl,
+  store, installer, gameService, library, profiles, checkUpdates, searchCatalog,
+  catalogFiles, downloadCatalogMod, diagnostics, backups, loadOrder, readGameLogs,
+  checkAppUpdate, syncTweaks, hasActiveTweaks, dialog, shell,
 }) {
   const selectedArchives = new Set();
   const selectedDirectories = new Set();
@@ -43,276 +56,15 @@ function registerIpc({
     return action(input);
   });
 
-  handle('window:minimize', () => getWindow().minimize());
-  handle('window:maximize', () => {
-    const window = getWindow();
-    if (window.isMaximized()) window.unmaximize();
-    else window.maximize();
+  registerSystemIpc({
+    handle, getWindow, store, installer, gameService, diagnostics, backups,
+    loadOrder, readGameLogs, checkAppUpdate, syncTweaks, hasActiveTweaks,
+    selectedArchives, selectedDirectories, dialog, shell, externalUrl,
   });
-  handle('window:close', () => getWindow().close());
-  handle('config:get', () => gameService.detectConfig());
-  handle('config:save', async (patch) => {
-    if (patch?.activeProfile !== undefined) throw new Error('Use the profile selector to change profiles.');
-    if (installer.isBusy() && patch?.games) throw new Error('Wait for the current mod operation before changing folders.');
-    const current = store.read();
-    const changes = [];
-    for (const [id, fields] of Object.entries(patch?.games ?? {})) {
-      validateGameId(id);
-      for (const field of ['gamePath', 'modsPath']) {
-        const value = fields?.[field];
-        if (value && value !== current.games[id][field] && !selectedDirectories.has(value)) {
-          changes.push(value);
-        }
-      }
-    }
-    if (changes.length) {
-      const decision = await dialog.showMessageBox(getWindow(), {
-        type: 'question', title: 'Change folders?', message: 'Use these folders?',
-        detail: changes.join('\n'), buttons: ['Cancel', 'Use folders'], defaultId: 0, cancelId: 0, noLink: true,
-      });
-      if (decision.response !== 1) throw new Error('Folder changes cancelled.');
-    }
-    if (installer.isBusy() && patch?.games) throw new Error('Wait for the current mod operation before changing folders.');
-    return store.patch(patch);
-  });
-  handle('games:detect', () => {
-    if (installer.isBusy()) throw new Error('Wait for the current mod operation before detecting games.');
-    return gameService.detectConfig();
-  });
-  handle('catalog:search', searchCatalog);
-  handle('catalog:files', (input) => {
-    const gameId = validateGameId(input?.gameId);
-    return catalogFiles(gameId, input?.modId);
-  });
-  handle('catalog:download', (input) => downloadCatalogMod({
-    gameId: input?.gameId,
-    modId: input?.modId,
-    fileId: input?.fileId,
-    fileName: input?.fileName,
-    nexusUrl: input?.nexusUrl ? externalUrl(input.nexusUrl) : undefined,
-    version: input?.version,
-  }));
-  handle('profiles:save', (input) => profiles.save(input?.name, input?.gameId));
-  handle('profiles:activate', async (input) => {
-    const preview = profiles.previewActivation?.(input?.name, input?.gameId);
-    if (preview && (preview.modChanges.length > 0 || preview.tweakChanges.length > 0)) {
-      const lines = [
-        ...preview.modChanges.slice(0, 12),
-        ...(preview.modChanges.length > 12 ? [`...and ${preview.modChanges.length - 12} more mod changes`] : []),
-        ...preview.tweakChanges,
-      ];
-      const decision = await dialog.showMessageBox(getWindow(), {
-        type: 'question',
-        title: 'Switch profile?',
-        message: `Switch to "${input?.name}"?`,
-        detail: lines.join('\n'),
-        buttons: ['Cancel', 'Switch'],
-        defaultId: 1,
-        cancelId: 0,
-        noLink: true,
-      });
-      if (decision.response !== 1) return store.read();
-    }
-    return profiles.activate(input?.name, input?.gameId);
-  });
-  handle('profiles:delete', async (input) => {
-    const decision = await dialog.showMessageBox(getWindow(), {
-      type: 'warning', title: 'Delete profile?', message: `Delete profile "${input?.name}"?`,
-      buttons: ['Cancel', 'Delete'], defaultId: 0, cancelId: 0, noLink: true,
-    });
-    if (decision.response !== 1) return store.read();
-    return profiles.remove(input?.name, input?.gameId);
-  });
-  handle('profiles:export', async (input) => {
-    const data = profiles.exportData(input?.gameId, input?.name);
-    const safeName = `${data.gameId}-${data.profile.replace(/[^a-z0-9-_]+/gi, '_')}.json`;
-    const result = await dialog.showSaveDialog(getWindow(), {
-      title: 'Export profile',
-      defaultPath: safeName,
-      filters: [{ name: 'JSON files', extensions: ['json'] }],
-    });
-    if (result.canceled || !result.filePath) return false;
-    fs.writeFileSync(result.filePath, JSON.stringify(data, null, 2), 'utf8');
-    return true;
-  });
-  handle('profiles:import', async (gameId) => {
-    const id = validateGameId(gameId);
-    const result = await dialog.showOpenDialog(getWindow(), {
-      title: 'Import profile',
-      filters: [{ name: 'JSON files', extensions: ['json'] }],
-      properties: ['openFile'],
-    });
-    const file = result.canceled ? null : result.filePaths[0] ?? null;
-    if (!file) return null;
-    const raw = fs.readFileSync(file, 'utf8');
-    if (raw.length > 4 * 1024 * 1024) throw new Error('Profile file is too large.');
-    return profiles.importData(id, JSON.parse(raw));
-  });
-  handle('mods:check-updates', (gameId) => {
-    validateGameId(gameId);
-    if (installer.isBusy()) throw new Error('Wait for the current mod operation to finish.');
-    installer.recover(gameId);
-    return checkUpdates(gameId);
-  });
-  handle('mods:save-details', (input) => installer.saveDetails(input?.gameId, input?.modId, input?.details));
-  handle('mods:read-config', (input) => installer.readConfigText(input?.gameId, input?.modId));
-  handle('mods:save-config', (input) => installer.saveConfigText(input?.gameId, input?.modId, input?.content));
-  handle('mods:get', (gameId) => {
-    validateGameId(gameId);
-    installer.recover(gameId);
-    return library.scan(store.read().games[gameId]);
-  });
-  handle('mods:toggle', (input) => {
-    const gameId = validateGameId(input?.gameId);
-    if (typeof input?.enable !== 'boolean') throw new Error('Invalid enabled state.');
-    if (typeof input?.modId === 'string' && input.modId.startsWith('workshop:')) {
-      const workshopId = input.modId.slice('workshop:'.length);
-      if (!/^\d{1,20}$/.test(workshopId)) throw new Error('Invalid Workshop item.');
-      store.update((next) => {
-        const list = next.games[gameId].disabledWorkshopIds ?? [];
-        next.games[gameId].disabledWorkshopIds = input.enable
-          ? list.filter((id) => id !== workshopId)
-          : [...new Set([...list, workshopId])];
-      });
-    } else {
-      installer.toggle(gameId, input?.modId, input.enable);
-    }
-    return library.scan(store.read().games[gameId]);
-  });
-  handle('mods:toggle-all', (input) => {
-    const gameId = validateGameId(input?.gameId);
-    if (typeof input?.enable !== 'boolean') throw new Error('Invalid enabled state.');
-    installer.toggleAll(gameId, input.enable);
-    const game = store.read().games[gameId];
-    const workshopIds = library.scan(game).filter((mod) => mod.source === 'workshop')
-      .map((mod) => mod.id.slice('workshop:'.length));
-    if (workshopIds.length || (game.disabledWorkshopIds?.length && input.enable)) {
-      store.update((next) => {
-        next.games[gameId].disabledWorkshopIds = input.enable ? [] : workshopIds;
-      });
-    }
-    return library.scan(store.read().games[gameId]);
-  });
-  handle('diagnostics:get', (gameId) => {
-    validateGameId(gameId);
-    installer.recover(gameId);
-    return diagnostics.analyze(gameId);
-  });
-  handle('diagnostics:fix', (input) => diagnostics.fixIssue(input?.gameId, input?.issueId));
-  handle('diagnostics:clean-temp', (gameId) => diagnostics.cleanTempFolders(gameId));
-  handle('diagnostics:install-basemod', (filePath) => {
-    if (!selectedArchives.has(filePath)) throw new Error('Choose a BaseMod archive through the file picker.');
-    return diagnostics.installBaseMod(filePath);
-  });
-  handle('backups:list', (gameId) => backups.list(gameId));
-  handle('backups:create', (input) => backups.create(input?.gameId, input?.label));
-  handle('backups:restore', async (input) => {
-    const decision = await dialog.showMessageBox(getWindow(), {
-      type: 'warning',
-      title: 'Restore save backup?',
-      message: 'Replace current save data with this backup?',
-      detail: 'A backup of the current save folder will be created automatically first.',
-      buttons: ['Cancel', 'Restore'],
-      defaultId: 0,
-      cancelId: 0,
-      noLink: true,
-    });
-    if (decision.response !== 1) return backups.list(input?.gameId);
-    return backups.restore(input?.gameId, input?.backupId);
-  });
-  handle('load-order:get', (gameId) => loadOrder.get(gameId));
-  handle('load-order:save', (input) => loadOrder.save(input?.gameId, input?.orders));
-  handle('logs:get', (gameId) => readGameLogs(gameId, { gamePath: store.read().games[validateGameId(gameId)]?.gamePath }));
-  handle('app:check-update', () => checkAppUpdate());
-  handle('mods:delete', async (input) => {
-    const directory = installer.folder(input?.gameId, input?.modId);
-    validateName(input?.modId);
-    const decision = await dialog.showMessageBox(getWindow(), {
-      type: 'warning', title: 'Delete mod?', message: 'Delete "' + input.modId + '"?',
-      detail: directory, buttons: ['Cancel', 'Delete'], defaultId: 0, cancelId: 0, noLink: true,
-    });
-    if (decision.response !== 1) return false;
-    if (installer.folder(input.gameId, input.modId) !== directory) throw new Error('The mods folder changed. Try deleting the mod again.');
-    installer.deleteMod(input?.gameId, input?.modId);
-    return library.scan(store.read().games[input.gameId]);
-  });
-  handle('mods:delete-many', async (input) => {
-    const gameId = validateGameId(input?.gameId);
-    if (!Array.isArray(input?.modIds) || input.modIds.length === 0 || input.modIds.length > 500) {
-      throw new Error('Choose one or more mods to delete.');
-    }
-    const cleanIds = [...new Set(input.modIds.map(validateName))];
-    const targets = cleanIds.map((modId) => ({ modId, dir: installer.folder(gameId, modId) }));
-    const decision = await dialog.showMessageBox(getWindow(), {
-      type: 'warning',
-      title: 'Delete selected mods?',
-      message: `Delete ${targets.length} selected ${targets.length === 1 ? 'mod' : 'mods'}?`,
-      detail: targets.map((t) => t.modId).join(', '),
-      buttons: ['Cancel', 'Delete'],
-      defaultId: 0,
-      cancelId: 0,
-      noLink: true,
-    });
-    if (decision.response !== 1) return false;
-    for (const target of targets) {
-      if (installer.folder(gameId, target.modId) !== target.dir) {
-        throw new Error('The mods folder changed. Try deleting the mods again.');
-      }
-      installer.deleteMod(gameId, target.modId);
-    }
-    return library.scan(store.read().games[gameId]);
-  });
-  handle('mods:open-folder', async (input) => {
-    validateGameId(input?.gameId);
-    const directory = library.folder(input.gameId, input.modId);
-    const error = await shell.openPath(directory);
-    if (error) throw new Error(error);
-    return true;
-  });
-  handle('mods:previews', (input) => {
-    validateGameId(input?.gameId);
-    if (typeof input.modId !== 'string') throw new Error('Choose an installed mod.');
-    return library.previews(input.gameId, input.modId);
-  });
-  handle('mods:install-archive', (input) => {
-    if (!selectedArchives.has(input?.filePath)) throw new Error('Choose the ZIP file before importing it.');
-    return installer.install(input?.gameId, input?.filePath, input?.options);
-  });
-  // This channel is exposed only through the preload's native File conversion.
-  handle('mods:install-dropped', (input) => installer.install(input?.gameId, input?.filePath, input?.options));
-  handle('dialog:select-archive', async () => {
-    const result = await dialog.showOpenDialog(getWindow(), {
-      title: 'Choose ZIP', filters: [{ name: 'ZIP files', extensions: ['zip'] }], properties: ['openFile'],
-    });
-    const file = result.canceled ? null : result.filePaths[0] ?? null;
-    if (file) selectedArchives.add(file);
-    return file;
-  });
-  handle('dialog:select-directory', async () => {
-    const result = await dialog.showOpenDialog(getWindow(), { title: 'Choose folder', properties: ['openDirectory'] });
-    const directory = result.canceled ? null : result.filePaths[0] ?? null;
-    if (directory) selectedDirectories.add(directory);
-    return directory;
-  });
-  handle('game:launch', async (input) => {
-    validateGameId(input?.gameId);
-    if (typeof input.modded !== 'boolean') throw new Error('Invalid launch mode.');
-    const game = store.read().games[input.gameId];
-    syncTweaks?.(game, input.modded);
-    if (input.gameId === 'ruina') {
-      loadOrder?.activateRuinaMod(game, undefined, { active: Boolean(input.modded && hasActiveTweaks?.('ruina', game?.tweaks)) });
-    }
-    if (input.modded && hasActiveTweaks?.(input.gameId, game?.tweaks)) {
-      try {
-        backups?.create(input.gameId, 'Auto-backup: Tweaks active');
-      } catch {
-        // Ignore if save folder does not exist yet
-      }
-    }
-    return gameService.launch(input.gameId, input.modded, installer.prepareLaunch);
-  });
-  handle('shell:open-external', async (url) => {
-    await shell.openExternal(externalUrl(url));
+  registerProfileIpc({ handle, getWindow, store, profiles, dialog });
+  registerModIpc({
+    handle, getWindow, store, installer, library, checkUpdates,
+    searchCatalog, catalogFiles, downloadCatalogMod, selectedArchives, dialog, shell,
   });
 }
 
