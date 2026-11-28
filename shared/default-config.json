@@ -45,11 +45,11 @@
       "tweaks": {
         "NoGrindBooks": false,
         "NoGrindBurnCards": false,
-        "NoGrindAmount": 10,
+        "NoGrindAmount": 999,
         "MultiplePurpleBooks": false,
         "MultipleGoldBooks": false,
         "MultipleCommonBooks": false,
-        "KeyPageLimit": 10
+        "KeyPageLimit": 99
       }
     }
   }

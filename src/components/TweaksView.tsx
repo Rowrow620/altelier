@@ -98,6 +98,7 @@ const LOBOTOMY_TOGGLES = [
 
 const SPEED_OPTIONS = [
   { value: 0, label: 'Off (Vanilla)' },
+  { value: 2, label: '2x / 4x' },
   { value: 4, label: '4x / 8x' },
   { value: 8, label: '8x / 16x' },
 ] as const;
@@ -185,7 +186,7 @@ export function TweaksView({ game, onSaveConfig }: TweaksViewProps) {
                 </div>
                 <div className="flex items-center gap-1.5">
                   {DROP_AMOUNT_OPTIONS.map((opt) => {
-                    const selected = Number(tweaks.NoGrindAmount ?? 10) === opt.value;
+                    const selected = Number(tweaks.NoGrindAmount ?? 999) === opt.value;
                     return (
                       <button
                         key={opt.value}
@@ -211,7 +212,7 @@ export function TweaksView({ game, onSaveConfig }: TweaksViewProps) {
                 </div>
                 <div className="flex items-center gap-1.5">
                   {KEY_PAGE_LIMIT_OPTIONS.map((opt) => {
-                    const selected = Number(tweaks.KeyPageLimit ?? 10) === opt.value;
+                    const selected = Number(tweaks.KeyPageLimit ?? 99) === opt.value;
                     return (
                       <button
                         key={opt.value}
