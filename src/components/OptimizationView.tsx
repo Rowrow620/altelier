@@ -6,6 +6,7 @@ import {
   ArrowUp,
   CheckCircle2,
   ExternalLink,
+  FileText,
   ListOrdered,
   RotateCw,
   SlidersHorizontal,
@@ -13,7 +14,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { errorMessage } from '../errors';
-import type { ConfigPatch, GameConfig, GameDiagnostics, LoadOrderState, SaveBackupsState } from '../types';
+import type { ConfigPatch, GameConfig, GameDiagnostics, GameLogState, LoadOrderState, SaveBackupsState } from '../types';
 
 interface OptimizationViewProps {
   game: GameConfig;
@@ -21,7 +22,7 @@ interface OptimizationViewProps {
   onLibraryChanged: () => void;
 }
 
-type OptimizationTab = 'diagnostics' | 'load-order' | 'backups' | 'launch';
+type OptimizationTab = 'diagnostics' | 'load-order' | 'backups' | 'logs' | 'launch';
 
 const UNITY_FLAGS = [
   { flag: '-popupwindow', label: 'Borderless window (-popupwindow)', description: 'Runs the game in a borderless window when windowed mode is selected.' },
@@ -40,6 +41,8 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
   const [data, setData] = useState<GameDiagnostics | null>(null);
   const [backupsState, setBackupsState] = useState<SaveBackupsState | null>(null);
   const [loadOrderState, setLoadOrderState] = useState<LoadOrderState | null>(null);
+  const [logsState, setLogsState] = useState<GameLogState | null>(null);
+  const [errorsOnly, setErrorsOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -54,14 +57,16 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
     setLoading(true);
     setError('');
     try {
-      const [diag, saves, order] = await Promise.all([
+      const [diag, saves, order, logs] = await Promise.all([
         api.getDiagnostics(game.id),
         api.getSaveBackups(game.id),
         api.getLoadOrder(game.id),
+        api.getGameLogs(game.id),
       ]);
       setData(diag);
       setBackupsState(saves);
       setLoadOrderState(order);
+      setLogsState(logs);
     } catch (cause) {
       setError(errorMessage(cause, 'Could not scan game diagnostics.'));
     } finally {
@@ -182,6 +187,7 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
     { id: 'diagnostics', label: 'Diagnostics', Icon: Wrench, badge: diagnosticCount },
     { id: 'load-order', label: 'Load Order', Icon: ListOrdered, badge: loadOrderState?.orders.length || undefined },
     { id: 'backups', label: 'Save Backups', Icon: Archive, badge: backupCount },
+    { id: 'logs', label: 'Logs', Icon: FileText, badge: logsState?.errorCount || undefined },
     { id: 'launch', label: 'Launch Options', Icon: SlidersHorizontal, badge: activeFlagCount || undefined },
   ];
 
@@ -527,6 +533,48 @@ export function OptimizationView({ game, onSaveConfig, onLibraryChanged }: Optim
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {subTab === 'logs' && (
+          <div id="opt-panel-logs" role="tabpanel" aria-labelledby="opt-tab-logs" className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-line bg-panel px-4 py-3">
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <div className="text-sm font-semibold text-white">Unity Player.log</div>
+                <div className="truncate font-mono text-xs text-muted" title={logsState?.logPath || ''}>
+                  {logsState?.logPath || 'Checking log path…'}
+                </div>
+              </div>
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-stone-200">
+                <input
+                  type="checkbox"
+                  checked={errorsOnly}
+                  onChange={(e) => setErrorsOnly(e.target.checked)}
+                  className="size-3.5 accent-[var(--color-accent)]"
+                />
+                <span>Errors only ({logsState?.errorCount ?? 0})</span>
+              </label>
+            </div>
+            {!logsState ? (
+              <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm text-muted">Loading log tail…</div>
+            ) : !logsState.exists ? (
+              <div className="rounded-md border border-line bg-panel px-4 py-3 text-xs text-muted">
+                No Player.log found yet. Launch the game once to generate Unity logs.
+              </div>
+            ) : (() => {
+              const visibleLines = errorsOnly
+                ? logsState.lines.filter((line) => /\b(error|fail)\b|exception/i.test(line))
+                : logsState.lines;
+              return visibleLines.length === 0 ? (
+                <div className="rounded-md border border-line bg-panel px-4 py-3 text-xs text-emerald-300">
+                  No error or exception lines found in the recent log tail.
+                </div>
+              ) : (
+                <pre className="max-h-96 overflow-auto rounded-md border border-line bg-chrome p-4 font-mono text-[11px] leading-relaxed text-stone-300 select-text">
+                  {visibleLines.join('\n')}
+                </pre>
+              );
+            })()}
           </div>
         )}
 

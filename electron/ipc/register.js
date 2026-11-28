@@ -33,7 +33,7 @@ function externalUrl(value) {
 
 function registerIpc({
   ipcMain, getWindow, rendererFile, devUrl, store, installer,
-  gameService, library, profiles, checkUpdates, searchCatalog, catalogFiles, downloadCatalogMod, diagnostics, backups, loadOrder, syncTweaks, hasActiveTweaks, dialog, shell,
+  gameService, library, profiles, checkUpdates, searchCatalog, catalogFiles, downloadCatalogMod, diagnostics, backups, loadOrder, readGameLogs, checkAppUpdate, syncTweaks, hasActiveTweaks, dialog, shell,
 }) {
   const selectedArchives = new Set();
   const selectedDirectories = new Set();
@@ -197,6 +197,8 @@ function registerIpc({
   });
   handle('load-order:get', (gameId) => loadOrder.get(gameId));
   handle('load-order:save', (input) => loadOrder.save(input?.gameId, input?.orders));
+  handle('logs:get', (gameId) => readGameLogs(gameId));
+  handle('app:check-update', () => checkAppUpdate());
   handle('mods:delete', async (input) => {
     const directory = installer.folder(input?.gameId, input?.modId);
     validateName(input?.modId);

@@ -182,6 +182,22 @@ export interface LoadOrderState {
   activeIds: string[];
 }
 
+export interface AppUpdateInfo {
+  currentVersion: string;
+  latestVersion: string;
+  updateAvailable: boolean;
+  releaseUrl: string;
+  checkedAt: string;
+}
+
+export interface GameLogState {
+  gameId: GameId;
+  logPath: string;
+  exists: boolean;
+  lines: string[];
+  errorCount: number;
+}
+
 export interface SaveBackupEntry {
   id: string;
   gameId: GameId;
@@ -245,6 +261,8 @@ export interface AtelierApi {
   restoreSaveBackup: (gameId: GameId, backupId: string) => Promise<SaveBackupsState>;
   getLoadOrder: (gameId: GameId) => Promise<LoadOrderState>;
   saveLoadOrder: (gameId: GameId, orders: string[]) => Promise<LoadOrderState>;
+  getGameLogs: (gameId: GameId) => Promise<GameLogState>;
+  checkAppUpdate: () => Promise<AppUpdateInfo>;
   installModArchive: (gameId: GameId, filePath: string, options?: ArchiveInstallOptions) => Promise<ArchiveInstallResult>;
   installDroppedModArchive: (gameId: GameId, file: File, options?: ArchiveInstallOptions) => Promise<ArchiveInstallResult>;
   selectModArchive: () => Promise<string | null>;
